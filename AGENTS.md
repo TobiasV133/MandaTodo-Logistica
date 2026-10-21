@@ -2,10 +2,17 @@
 
 ## Repository state
 
-- Early scaffold: no source code, manifests, build/test/lint config, CI, or `opencode.json` yet. Do not assume commands exist.
+- Early scaffold: no source code, manifests, build/test/lint config, or CI yet. Do not assume commands exist.
 - Stack is fixed by the spec: React + Bootstrap + React-Leaflet + Lucide, Spring Boot + Spring Data JPA, MySQL 8.x, OpenStreetMap/Nominatim.
 - OpenSpec CLI 1.11.0 is installed globally. PowerShell blocks `openspec.ps1`, so use `cmd /c "openspec ..."` from the repo root.
 - The project uses the requested `.openspec/` layout, not the CLI-native `openspec/` one. The CLI reports `No OpenSpec root found` for this repo and will not validate `.openspec/specs/manda-todo/manda-todo.spec.md`; do not treat that as a broken spec. Migrate to `openspec/specs/<capability>/spec.md` if CLI validation is required.
+
+## OpenCode config
+
+- `.opencode/opencode.json` sets `default_agent` to `senior-fullstack-lead`.
+- Agents live in `.opencode/agents/`: the primary `senior-fullstack-lead`, plus the subagents `database-integrity-specialist` and `qa-testing-engineer`.
+- Skills live in `.opencode/skills/db-seeder/` and `.opencode/skills/spec-checker/`.
+- Config-time files are loaded at startup; restart opencode after changing agents, skills, or `.opencode/opencode.json`.
 
 ## Source of truth
 
