@@ -1,0 +1,4 @@
+project: "MandáTodo Logística"
+version: "1.0.0"
+spec_directory: ".openspec/specs"
+changes_directory: ".openspec/changes"

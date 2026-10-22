@@ -1,0 +1,18 @@
+{
+  "json.schemaDownload.enable": true,
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "/.opencode/opencode.json",
+        "opencode.json"
+      ],
+      "url": "https://opencode.ai/config.json"
+    },
+    {
+      "fileMatch": [
+        "*.json"
+      ],
+      "url": "https://models.dev/model-schema.json"
+    }
+  ]
+}
