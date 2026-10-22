@@ -1,33 +1,54 @@
-# AGENTS.md
+# MandáTodo
 
-## Repository state
+MandáTodo es un sistema interno de logística para operaciones de distribución, diseñado en español rioplatense. El proyecto se encuentra actualmente en el Módulo 2. El orden de presentación acordado para el alcance es: Módulo 1, Módulo 2, Módulo 4, Módulo 5 y Módulo 3.
 
-- Early scaffold: no source code, manifests, build/test/lint config, or CI yet. Do not assume commands exist.
-- Stack is fixed by the spec: React + Bootstrap + React-Leaflet + Lucide, Spring Boot + Spring Data JPA, MySQL 8.x, OpenStreetMap/Nominatim.
-- OpenSpec CLI 1.11.0 is installed globally. PowerShell blocks `openspec.ps1`, so use `cmd /c "openspec ..."` from the repo root.
-- The project uses the requested `.openspec/` layout, not the CLI-native `openspec/` one. The CLI reports `No OpenSpec root found` for this repo and will not validate `.openspec/specs/manda-todo/manda-todo.spec.md`; do not treat that as a broken spec. Migrate to `openspec/specs/<capability>/spec.md` if CLI validation is required.
+El prototipo de interfaz es frontend-only y utiliza datos simulados en memoria. Incluye un flujo de acceso de demostración y geocodificación y mapas mediante servicios externos. La autenticación y la persistencia no son reales.
 
-## OpenCode config
+## Tecnologías
 
-- `.opencode/opencode.json` sets `default_agent` to `senior-fullstack-lead`.
-- Agents live in `.opencode/agents/`: the primary `senior-fullstack-lead`, plus the subagents `database-integrity-specialist` and `qa-testing-engineer`.
-- Skills live in `.opencode/skills/db-seeder/` and `.opencode/skills/spec-checker/`.
-- Config-time files are loaded at startup; restart opencode after changing agents, skills, or `.opencode/opencode.json`.
+- JavaScript con React para la interfaz y sus componentes.
+- React Leaflet para mapas interactivos.
+- SQL para la gestión de datos relacionales.
+- Java con Spring Boot para el backend.
 
-## Source of truth
+## Módulos
 
-- `.openspec/specs/manda-todo/manda-todo.spec.md` is the single, immutable source of truth for stack, data model, business rules, and the 19-endpoint API. Do not edit it without explicit user instruction; update it first if requirements change.
-- `.openspec/config.yaml` declares the project metadata and the `.openspec/specs` / `.openspec/changes` directories.
-- `schema.sql` is the canonical MySQL 8 DDL for `mandatodo_db` (5 tables: `clientes`, `operarios`, `pedidos`, `revisiones`, `auditoria`). It drops and recreates those tables, so running it is destructive.
-- `seeds.sql` loads deterministic test data after `schema.sql` (3 operarios, 6 clientes, 9 pedidos, 2 revisiones, 17 eventos de auditoría). It uses fixed IDs and test credentials, and is not idempotent: run it only against freshly created tables.
-- Schema includes implementation-required columns not present in the TS model: `operarios.password_hash` (login), `pedidos.fecha_programada` (failed-delivery retry), and `pedidos.motivo_cancelacion` (in-transit cancellation). Triggers make `auditoria` append-only.
-- Apply with a MySQL 8 client: `mysql -u <user> -p < schema.sql`. No `mysql` CLI is installed in this environment (verified); the Docker daemon is also not running, so the DDL has not been executed against MySQL 8.
+El alcance funcional y las reglas específicas de cada módulo están separados en instrucciones por carpeta bajo `src/features/`. El Módulo 3 se presenta al final según el orden acordado, sin cambiar su numeración.
 
-## Project context
+Las guías por módulo documentan el alcance y las decisiones futuras; no implican que esas funciones ya estén implementadas. El prototipo sigue siendo frontend-only, con datos en memoria, acceso de demostración y acciones simuladas. Las pantallas existentes están concentradas en `src/components/` y se rigen por su propio `AGENTS.md`; las guías de `src/features/` aplican al código que se ubique en esas carpetas.
 
-- MandaTodo-Logistica: logistics management software for a small/medium transport company (university project, Grupo 16 - Caso 7).
-- `README.md` and project documentation are in Spanish; keep new docs consistent with that language.
+## Dominio
 
-## Git
+El modelo representa clientes particulares y empresas, sus direcciones y pedidos de carga. Se define mediante tipos e interfaces:
 
-- Default/primary branch is `main`; remote is `origin`.
+- `TipoCliente`: `Particular` o `Empresa`.
+- `TipoDocumento`: `DNI` o `CUIT`.
+- `EstadoPedido`: `en_revision`, `pendiente`, `en_transito`, `cancelado_transito`, `entregado` o `fallido`.
+- `MotivoFalla`: `Ausente`, `Dirección Inexistente`, `Dirección Incompleta`, `Rehúsa la entrega`, `Fuera de horario`, `Acceso restringido` u `Otro`.
+- `AlertaRevision`: `geo_ambigua`, `altura_cero`, `duplicado_empresa`, `sin_numero`, `fiabilidad_baja` o `fiabilidad_media`.
+
+### Entidades y atributos
+
+- `Direccion`: `id` identifica el registro; `raw` conserva el texto original; `calle`, `altura`, `piso`, `depto`, `localidad` y `provincia` describen el domicilio; `lat` y `lng` guardan coordenadas opcionales; `confirmada` indica si la ubicación fue confirmada.
+- `Cliente`: `id`, `nombre`, `documento`, `tipoDocumento` y `tipoCliente` identifican y clasifican al cliente; `esFrecuente` señala su condición de cliente habitual; `telefono` y `email` contienen sus datos de contacto; `direcciones` reúne sus domicilios; `creadoEn` registra su fecha de alta.
+- `Pedido`: `id`, `clienteId` y `direccionId` identifican el pedido y sus relaciones; `descripcion`, `peso`, `monto` y `kilometros` describen la carga y su tarifa; `fechaEntrega` y `estado` indican planificación y situación; `alertas` contiene observaciones para revisión; `motivoFalla` y `notaFalla` son opcionales y describen una entrega fallida; `hojaRutaGenerada`, `remitoGenerado` y `recargoReprogramacion` son datos opcionales asociados a la operación; `creadoEn` y `actualizadoEn` registran fechas.
+
+Los roles disponibles en el prototipo son Administrador y Operario. Los datos, los permisos y las acciones de usuarios son simulaciones de la interfaz, no controles de acceso reales.
+
+## Interfaz
+
+La experiencia está orientada a tareas operativas de logística: alta y seguimiento de cargas, revisión de incidencias, gestión de clientes y consulta de actividad. El lenguaje visible es español rioplatense.
+
+La dirección visual es clara, compacta y corporativa. Usa fondo gris muy claro (`#F8F9FA`), superficies blancas (`#FFFFFF`), bordes suaves (`#E2E8F0` y `#CBD5E1`), texto principal azul noche (`#0F172A`) y texto secundario (`#64748B`). El azul cobalto (`#2563EB`, hover `#1D4ED8`) es el color de acción; verde (`#15803D`), ámbar (`#92400E`), rojo (`#B91C1C`) y celeste (`#0369A1`) comunican estados. La navegación lateral usa azul noche (`#0F172A`) con superficies elevadas (`#1E293B`).
+
+La tipografía de interfaz es Inter y la tipografía monoespaciada es DM Mono, usada para cifras, fechas e identificadores. La composición prioriza información operativa legible, superficies blancas, bordes sutiles, radios moderados, sombras discretas y etiquetas de estado suaves.
+
+## Convenciones del proyecto
+
+- Mantener en español rioplatense los textos visibles, mensajes, fechas y terminología de la interfaz.
+- Usar componentes funcionales de React, hooks y tipos explícitos, respetando el modelo de dominio descrito arriba.
+- Mantener coherentes los datos compartidos y evitar duplicar clientes o pedidos en estados independientes.
+- Conservar la dirección visual y los patrones de interacción existentes, incluidos estados vacíos, confirmaciones, indicadores de carga y feedback de acciones.
+- Priorizar controles accesibles: etiquetas claras, foco visible, navegación por teclado y elementos nativos cuando sean adecuados.
+- Evitar dependencias nuevas cuando la funcionalidad ya esté cubierta por las tecnologías existentes.
+- Tratar el acceso, los permisos, los datos, la persistencia y las acciones operativas como simulaciones; no presentarlos como capacidades reales de backend.
