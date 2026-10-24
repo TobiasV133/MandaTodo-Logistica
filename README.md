@@ -65,6 +65,67 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 | Base de Datos | MySQL 8.x (`mandatodo_db`) | Almacenamiento transaccional de clientes, pedidos, revisiones, operarios y auditoría. |
 | Documentación / PDF | OpenPDF / iText | Generación y reimpresión de remitos de entrega en PDF. |
 
+### Puesta en marcha local
+
+Requisitos: Node.js 20.19+ o 22.12+, JDK 21+, MySQL 8.x y el cliente `mysql` en el `PATH`.
+Maven es opcional: el wrapper incluido en `backend/` descarga Maven 3.9.11 la primera vez.
+
+**Backend**
+
+```bash
+mysql -u root -p < schema.sql
+mysql -u root -p < seeds.sql
+cd backend
+DB_USERNAME=root DB_PASSWORD=tu_clave ./mvnw spring-boot:run
+```
+
+En PowerShell:
+
+```powershell
+Get-Content .\schema.sql | mysql -u root -p
+Get-Content .\seeds.sql | mysql -u root -p
+cd backend
+$env:DB_USERNAME = "root"
+$env:DB_PASSWORD = "tu_clave"
+.\mvnw.cmd spring-boot:run
+```
+
+Si `mysql` no está en el `PATH`, usá la ruta completa, por ejemplo
+`Get-Content .\schema.sql | & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p`.
+En PowerShell no funciona la redirección `<` de Bash.
+
+Queda disponible en `http://localhost:8080`.
+
+**Frontend**
+
+```bash
+npm install
+cp .env.example .env    # en Windows: copy .env.example .env
+npm run dev
+```
+
+Abre `http://localhost:5173`. El login sigue siendo de demostración (`admin` / `admin`) y no
+autentica contra el backend.
+
+| Variable | Dónde se configura | Valor por defecto | Uso |
+| --- | --- | --- | --- |
+| `VITE_API_BASE_URL` | `.env` del frontend | `http://localhost:8080` | URL base del backend. |
+| `VITE_OPERARIO_ID` | `.env` del frontend | sin valor | Operario que queda en la auditoría. Con `seeds.sql`, `1` = Laura Gómez (Admin). |
+| `DB_URL` | Entorno del backend | `jdbc:mysql://localhost:3306/mandatodo_db?...` | Conexión MySQL. |
+| `DB_USERNAME` / `DB_PASSWORD` | Entorno del backend | `root` / vacío | Credenciales de MySQL. |
+| `CORS_ALLOWED_ORIGINS` | Entorno del backend | `http://localhost:5173,http://127.0.0.1:5173` | Orígenes permitidos, separados por coma. |
+| `PORT` | Entorno del backend | `8080` | Puerto de la API. |
+
+Notas de configuración:
+
+- Las variables `VITE_*` se leen al iniciar Vite. Al modificar `.env`, Vite reinicia el servidor; si el
+  valor no se refleja, reiniciá `npm run dev`.
+- Vite usa `strictPort` en `5173`; si el puerto está ocupado, falla en lugar de cambiar de puerto y
+  romper CORS. Si usás `npm run preview` (puerto `4173`), agregá ese origen a `CORS_ALLOWED_ORIGINS`.
+- El login no determina `VITE_OPERARIO_ID`: la pantalla de Gestión de pedidos necesita un ID de
+  operario existente para poder auditar cambios de estado y remitos.
+- `npm run typecheck` valida TypeScript y `npm run build` genera `dist/`.
+
 ## 4. Arquitectura de datos y DER
 
 ### Entidades principales
@@ -151,6 +212,12 @@ remitos PDF**:
 El resto de los endpoints del contrato queda pendiente para próximos cortes. La puesta en marcha,
 los ejemplos de request y las decisiones de implementación están documentados en
 [`backend/README.md`](backend/README.md).
+
+La pantalla de Gestión de pedidos (`src/components/gestion-pedidos/`) ya consume el listado,
+los cambios de estado y la descarga de remitos PDF del backend. Para registrar las acciones,
+configurá en el entorno de Vite `VITE_API_BASE_URL` (por defecto `http://localhost:8080`) y
+`VITE_OPERARIO_ID` con el ID de un operario activo; con los datos de prueba, el Admin es el ID `1`.
+El login de demostración del frontend aún no está conectado a autenticación y no determina ese ID.
 
 ## 6. Estrategia de branching (Git Flow)
 

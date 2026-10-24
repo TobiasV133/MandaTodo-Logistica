@@ -2,7 +2,7 @@
 
 MandáTodo es un sistema interno de logística para operaciones de distribución, diseñado en español rioplatense. El proyecto se encuentra actualmente en el Módulo 2. El orden de presentación acordado para el alcance es: Módulo 1, Módulo 2, Módulo 4, Módulo 5 y Módulo 3.
 
-El prototipo de interfaz es frontend-only y utiliza datos simulados en memoria. Incluye un flujo de acceso de demostración y geocodificación y mapas mediante servicios externos. La autenticación y la persistencia no son reales.
+La mayoría de las pantallas del prototipo utiliza datos simulados en memoria y el acceso sigue siendo de demostración. La pantalla Gestión de pedidos consume los endpoints existentes del backend para listar pedidos, cambiar estados y descargar remitos PDF. La geocodificación y los mapas usan servicios externos.
 
 ## Tecnologías
 
@@ -15,7 +15,7 @@ El prototipo de interfaz es frontend-only y utiliza datos simulados en memoria. 
 
 El alcance funcional y las reglas específicas de cada módulo están separados en instrucciones por carpeta bajo `src/features/`. El Módulo 3 se presenta al final según el orden acordado, sin cambiar su numeración.
 
-Las guías por módulo documentan el alcance y las decisiones futuras; no implican que esas funciones ya estén implementadas. El prototipo sigue siendo frontend-only, con datos en memoria, acceso de demostración y acciones simuladas. Las pantallas existentes están concentradas en `src/components/` y se rigen por su propio `AGENTS.md`; las guías de `src/features/` aplican al código que se ubique en esas carpetas.
+Las guías por módulo documentan el alcance y las decisiones futuras; no implican que esas funciones ya estén implementadas. Salvo la integración de Gestión de pedidos descrita arriba, el prototipo conserva datos en memoria, acceso de demostración y acciones simuladas. Las pantallas existentes están concentradas en `src/components/` y se rigen por su propio `AGENTS.md`; las guías de `src/features/` aplican al código que se ubique en esas carpetas.
 
 ## Dominio
 

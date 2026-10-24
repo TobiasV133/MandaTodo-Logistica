@@ -9,7 +9,7 @@ Estas instrucciones complementan el `AGENTS.md` raíz y aplican a `src/component
 | `Login.tsx` | Acceso simulado con `admin` / `admin`, error y estado de carga. |
 | `NuevaCarga.tsx` | Wizard Cliente → Dirección → Pedido → Confirmar; geocodificación, mapa, cálculo de tarifa, alertas y remito. |
 | `BandejaRevision.tsx` | Pedidos retenidos, detalle de alertas, ajuste visual del pin y aprobación/rechazo. |
-| `GestionPedidos.tsx` | Búsqueda, filtros por estado, tabla, edición, cambios de estado, remitos, reimpresión y recargos. |
+| `GestionPedidos.tsx` | Interfaz de gestión conectada al backend: búsqueda, filtros, detalle, cambios de estado y descarga de remitos PDF. Su implementación vive en `gestion-pedidos/`. |
 | `Clientes.tsx` | Búsqueda, resumen operativo y edición inline de clientes. |
 | `Usuarios.tsx` | CRUD simulado en memoria para roles Administrador/Operario. |
 | `Auditoria.tsx` | Historial mock de actividad con filtros. |
@@ -72,9 +72,9 @@ Todos los filtros y selectores de estado deben considerar la unión completa de 
 
 - Drawers de edición: overlay oscuro y panel blanco anclado a la derecha.
 - Modales de confirmación: panel blanco centrado, con cierre/cancelación visibles.
-- Las vistas de remito simulan formato A4 y acciones de impresión/PDF; conservar legibilidad sobre blanco y no mezclar el tema del overlay con el documento.
+- Gestión de pedidos solicita el PDF real al endpoint de remitos; otras vistas pueden seguir usando vistas imprimibles simuladas. Conservar legibilidad del documento sobre blanco y no mezclar el tema del overlay con el documento.
 - La reimpresión debe indicar que es duplicado y conservar el motivo.
-- Las acciones simuladas deben comunicar feedback sin prometer una operación backend real.
+- Las acciones simuladas deben comunicar feedback sin prometer una operación backend real. Gestión de pedidos es una excepción: mostrar errores reales de API y no simular éxito si falla una solicitud.
 
 ## Límites y consistencia
 

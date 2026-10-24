@@ -24,7 +24,7 @@ pero todavía no se expone un endpoint de consulta.
 ## Requisitos
 
 - JDK 21 o superior.
-- Maven 3.9 o superior.
+- Maven 3.9 o superior, o usar el wrapper incluido (`./mvnw` / `.\mvnw.cmd`).
 - MySQL 8.x con la base `mandatodo_db` creada a partir de `schema.sql`.
 - Opcional: cargar `seeds.sql` para tener operarios y pedidos de prueba.
 
@@ -36,7 +36,19 @@ mysql -u root -p < schema.sql
 mysql -u root -p < seeds.sql
 
 cd backend
-mvn spring-boot:run
+DB_USERNAME=root DB_PASSWORD=tu_clave ./mvnw spring-boot:run
+```
+
+En PowerShell la redirección `<` no funciona: usá
+`Get-Content .\schema.sql | mysql -u root -p` (y lo mismo con `seeds.sql`).
+
+En PowerShell, el wrapper no requiere Maven instalado:
+
+```powershell
+cd backend
+$env:DB_USERNAME = "root"
+$env:DB_PASSWORD = "tu_clave"
+.\mvnw.cmd spring-boot:run
 ```
 
 Variables de entorno útiles:
@@ -47,9 +59,23 @@ Variables de entorno útiles:
 | `DB_USERNAME` | `root` |
 | `DB_PASSWORD` | vacío |
 | `PORT` | `8080` |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` |
 
 La aplicación escucha en `http://localhost:8080`.
+
+### Integración con el frontend
+
+La pantalla **Gestión de pedidos** consume `GET /api/pedidos`, `PATCH /api/pedidos/{id}/estado` y
+`POST /api/remitos/{idPedido}/imprimir`. Para que funcione:
+
+- Vite debe correr en `http://localhost:5173` o `http://127.0.0.1:5173`, que son los orígenes
+  permitidos por defecto (`CORS_ALLOWED_ORIGINS`). Si se usa otro puerto u origen, agregarlo separado
+  por coma.
+- En el `.env` del frontend, `VITE_API_BASE_URL` apunta al backend (`http://localhost:8080`) y
+  `VITE_OPERARIO_ID` debe ser un operario activo de `operarios` (con `seeds.sql`, `1` = Admin).
+- El login de demostración (`admin` / `admin`) no autentica contra esta API ni define el operario.
+- MySQL debe estar en ejecución y `DB_USERNAME` / `DB_PASSWORD` deben coincidir con las credenciales
+  locales. El backend no crea el esquema: hay que ejecutar `schema.sql` y, opcionalmente, `seeds.sql`.
 
 ## Reglas del motor de retención
 
@@ -320,7 +346,7 @@ rechazar una revisión.
 
 ```bash
 cd backend
-mvn test
+./mvnw test
 ```
 
 Cobertura del corte:
@@ -339,6 +365,8 @@ Cobertura del corte:
   reimpresión marcada con su motivo y kilómetros sin informar.
 - `RemitoServiceTest`: primera impresión, motivo obligatorio al reimprimir, registro del evento
   `Reimpresión`, pedidos en revisión o cancelados y operario inexistente.
+- `ApiIntegracionTest`: contrato HTTP completo contra H2 (CORS, listado, cambio de estado con recargo,
+  PDF y `409` de reimpresión sin motivo).
 - `PersistenciaTest`: mapeo JPA y consultas contra H2 en modo de prueba.
 
 ## Estructura
