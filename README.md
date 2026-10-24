@@ -131,6 +131,27 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 | `GET` | `/api/auditoria` | Consulta el listado general de logs. |
 | `GET` | `/api/auditoria?fecha=...&operario=...` | Consulta auditoría con filtros por fecha y operario. |
 
+### Backend implementado (corte actual)
+
+El backend Spring Boot vive en [`backend/`](backend/README.md). Por ahora implementa el corte del
+**Motor de Retención "En Revisión"**, la **lógica de Entregas Fallidas** y la **generación de
+remitos PDF**:
+
+- `POST /api/pedidos`: evalúa dirección ambigua (altura 0, S/N, geocodificación no confiable) y
+  duplicado comercial de clientes Empresa del mismo día.
+- `GET /api/pedidos/en-revision`: bandeja de pedidos retenidos, agrupados por pedido.
+- `PUT /api/pedidos/{id}/revision`: aprueba o rechaza la revisión.
+- `PATCH /api/pedidos/{id}/estado`: al marcar `FALLIDO`, exige motivo, reprograma para el siguiente
+  día hábil y aplica un recargo del 50% sobre el costo de envío.
+- `POST /api/remitos/{idPedido}/imprimir`: devuelve el remito A4 en PDF con detalle, kilos,
+  kilómetros, importe y espacio de firma. Las reimpresiones exigen motivo y quedan registradas como
+  evento `Reimpresión` en la auditoría.
+- `GET /api/pedidos` y `GET /api/pedidos/{id}`: consulta operativa.
+
+El resto de los endpoints del contrato queda pendiente para próximos cortes. La puesta en marcha,
+los ejemplos de request y las decisiones de implementación están documentados en
+[`backend/README.md`](backend/README.md).
+
 ## 6. Estrategia de branching (Git Flow)
 
 El repositorio trabaja con `main` como rama estable y protegida. Las funcionalidades se desarrollan en ramas cortas y se integran exclusivamente mediante Pull Requests (PR).
