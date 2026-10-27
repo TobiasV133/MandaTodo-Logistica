@@ -27,7 +27,7 @@ export default function LoginView() {
     setError('')
 
     if (!username.trim() || !password) {
-      setError('Ingresá tu usuario y contraseña para continuar.')
+      setError('Ingresá tu email y contraseña para continuar.')
       return
     }
 
@@ -75,18 +75,18 @@ export default function LoginView() {
         <form onSubmit={handleSubmit} noValidate>
           <div className="mb-3">
             <label className="form-label field-label" htmlFor="login-username">
-              Usuario
+              Email
             </label>
             <div className="input-with-icon">
-              <Icon name="user" size={18} />
+              <Icon name="mail" size={18} />
               <input
                 id="login-username"
-                type="text"
+                type="email"
                 className="form-control"
-                placeholder="Tu usuario"
+                placeholder="tu@email.com"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
-                autoComplete="username"
+                autoComplete="email"
                 autoFocus
                 disabled={loading}
               />

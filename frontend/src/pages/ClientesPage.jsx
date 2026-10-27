@@ -1,23 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
+import ClienteFormModal from '../components/clientes/ClienteFormModal'
 import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
+import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
 import { listarClientes } from '../services/clienteService'
 import { formatearDocumento } from '../utils/documentos'
 import { formatFecha } from '../utils/formatters'
 
-export default function ClientesView() {
-  const navigate = useNavigate()
+function badgeTipoCliente(tipoCliente) {
+  return tipoCliente === 'Empresa' ? 'bg-primary' : 'bg-success'
+}
+
+export default function ClientesPage() {
+  const { operario } = useAuth()
   const [clientes, setClientes] = useState([])
   const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [mensaje, setMensaje] = useState('')
+  const [modalAbierto, setModalAbierto] = useState(false)
+  const [clienteEditando, setClienteEditando] = useState(null)
 
   const cargar = useCallback(async () => {
     setLoading(true)
     setError('')
+
     try {
       const data = await listarClientes()
       setClientes(Array.isArray(data) ? data : [])
@@ -40,6 +49,7 @@ export default function ClientesView() {
     return clientes.filter((cliente) => {
       const texto = [
         cliente.nombreRazonSocial,
+        cliente.tipoDocumento,
         cliente.numeroDocumento,
         cliente.email,
         cliente.telefono,
@@ -48,9 +58,33 @@ export default function ClientesView() {
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
+
       return texto.includes(termino)
     })
   }, [clientes, busqueda])
+
+  const abrirNuevo = () => {
+    setClienteEditando(null)
+    setModalAbierto(true)
+    setMensaje('')
+  }
+
+  const abrirEditar = (cliente) => {
+    setClienteEditando(cliente)
+    setModalAbierto(true)
+    setMensaje('')
+  }
+
+  const handleSaved = (_data, modo) => {
+    setModalAbierto(false)
+    setClienteEditando(null)
+    setMensaje(
+      modo === 'crear'
+        ? 'Cliente creado correctamente.'
+        : 'Cliente actualizado correctamente.',
+    )
+    cargar()
+  }
 
   return (
     <div className="page-stack">
@@ -61,16 +95,44 @@ export default function ClientesView() {
           <p>Personas y empresas que ya operaron con MandáTodo.</p>
         </div>
         <div className="d-flex gap-2">
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={cargar} disabled={loading}>
-            <Icon name="refresh" size={16} />
+          <button
+            type="button"
+            className="btn btn-outline-secondary btn-sm"
+            onClick={cargar}
+            disabled={loading}
+          >
+            <Icon name="refresh" size={16} className="me-1" />
             Actualizar
           </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => navigate('/nueva-carga')}>
-            <Icon name="plus" size={16} />
-            Nueva carga
+          <button type="button" className="btn btn-primary btn-sm" onClick={abrirNuevo}>
+            <Icon name="plus" size={16} className="me-1" />
+            Nuevo cliente
           </button>
         </div>
       </div>
+
+      {mensaje && (
+        <div className="alert alert-success d-flex align-items-center gap-2" role="status">
+          <Icon name="checkCircle" size={18} />
+          <span>{mensaje}</span>
+          <button
+            type="button"
+            className="btn-close ms-auto"
+            aria-label="Cerrar"
+            onClick={() => setMensaje('')}
+          />
+        </div>
+      )}
+
+      {error && (
+        <div className="alert alert-danger d-flex align-items-center gap-2" role="alert">
+          <Icon name="alert" size={18} />
+          <span>{error}</span>
+          <button type="button" className="btn btn-sm btn-outline-danger ms-auto" onClick={cargar}>
+            Reintentar
+          </button>
+        </div>
+      )}
 
       <div className="panel panel--table">
         <div className="table-toolbar">
@@ -78,28 +140,19 @@ export default function ClientesView() {
             <strong>{clientesFiltrados.length}</strong>
             <span>{clientesFiltrados.length === 1 ? 'cliente' : 'clientes'}</span>
           </div>
+
           <div className="input-with-icon table-search">
             <Icon name="search" size={17} />
             <input
               type="search"
               className="form-control"
-              placeholder="Buscar por nombre, documento o email"
+              placeholder="Buscar por nombre, DNI/CUIT o email"
               value={busqueda}
               onChange={(event) => setBusqueda(event.target.value)}
               aria-label="Buscar clientes"
             />
           </div>
         </div>
-
-        {error && (
-          <div className="alert alert-danger d-flex align-items-center gap-2 m-3" role="alert">
-            <Icon name="alert" size={18} />
-            <span>{error}</span>
-            <button type="button" className="btn btn-sm btn-outline-danger ms-auto" onClick={cargar}>
-              Reintentar
-            </button>
-          </div>
-        )}
 
         {loading ? (
           <div className="table-loading">
@@ -109,13 +162,27 @@ export default function ClientesView() {
         ) : clientesFiltrados.length === 0 ? (
           <EmptyState
             icon="users"
-            title="No hay clientes para mostrar"
-            description="Los clientes se crean automáticamente al registrar la primera carga con su documento."
+            title={clientes.length === 0 ? 'Todavía no hay clientes' : 'No encontramos coincidencias'}
+            description={
+              clientes.length === 0
+                ? 'Registrá el primer cliente para empezar a operar.'
+                : 'Probá con otro nombre, documento o email.'
+            }
             action={
-              <button type="button" className="btn btn-primary" onClick={() => navigate('/nueva-carga')}>
-                <Icon name="plus" size={17} />
-                Registrar pedido
-              </button>
+              clientes.length === 0 ? (
+                <button type="button" className="btn btn-primary" onClick={abrirNuevo}>
+                  <Icon name="plus" size={17} className="me-1" />
+                  Nuevo cliente
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setBusqueda('')}
+                >
+                  Limpiar búsqueda
+                </button>
+              )
             }
           />
         ) : (
@@ -127,8 +194,9 @@ export default function ClientesView() {
                   <th>Documento</th>
                   <th>Contacto</th>
                   <th>Tipo</th>
-                  <th>Frecuente</th>
+                  <th>Condición</th>
                   <th>Alta</th>
+                  <th className="text-end">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,38 +205,54 @@ export default function ClientesView() {
                     <td>
                       <div className="client-cell">
                         <strong>{cliente.nombreRazonSocial}</strong>
-                        <span>{cliente.tipoCliente === 'Empresa' ? 'Empresa' : 'Particular'}</span>
+                        <span>{cliente.tipoCliente}</span>
                       </div>
                     </td>
+
                     <td>
                       <span className="code-cell">
                         {cliente.tipoDocumento}{' '}
                         {formatearDocumento(cliente.tipoDocumento, cliente.numeroDocumento)}
                       </span>
                     </td>
+
                     <td>
                       <div className="contact-cell">
                         <span>{cliente.email}</span>
                         <small>{cliente.telefono || 'Sin teléfono'}</small>
                       </div>
                     </td>
+
                     <td>
-                      <span className={`chip ${cliente.tipoCliente === 'Empresa' ? 'chip--blue' : 'chip--neutral'}`}>
+                      <span className={`badge ${badgeTipoCliente(cliente.tipoCliente)}`}>
                         {cliente.tipoCliente}
                       </span>
                     </td>
+
                     <td>
                       {cliente.esFrecuente ? (
-                        <span className="chip chip--success">
-                          <Icon name="star" size={13} />
+                        <span className="badge bg-warning text-dark">
+                          <Icon name="star" size={12} className="me-1" />
                           Frecuente
                         </span>
                       ) : (
-                        <span className="text-muted">No</span>
+                        <span className="badge bg-light text-secondary border">Ocasional</span>
                       )}
                     </td>
+
                     <td>
                       <span className="date-cell">{formatFecha(cliente.fechaCreacion)}</span>
+                    </td>
+
+                    <td className="text-end">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => abrirEditar(cliente)}
+                      >
+                        <Icon name="edit" size={15} className="me-1" />
+                        Editar
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -176,6 +260,19 @@ export default function ClientesView() {
             </table>
           </div>
         )}
+      </div>
+
+      {modalAbierto && (
+        <ClienteFormModal
+          key={clienteEditando?.idCliente ?? 'nuevo'}
+          cliente={clienteEditando}
+          onClose={() => setModalAbierto(false)}
+          onSaved={handleSaved}
+        />
+      )}
+
+      <div className="text-secondary small">
+        Operador actual: {operario?.nombreCompleto ?? operario?.nombre ?? 'sin sesión'}
       </div>
     </div>
   )

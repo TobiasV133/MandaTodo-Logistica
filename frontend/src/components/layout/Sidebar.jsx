@@ -11,8 +11,8 @@ const NAV_ITEMS = [
   { to: '/pedidos', label: 'Pedidos', icon: 'package' },
   { to: '/en-revision', label: 'En revisión', icon: 'alert', badgeKey: 'enRevision' },
   { to: '/clientes', label: 'Clientes', icon: 'users' },
-  { to: '/usuarios', label: 'Usuarios', icon: 'shield' },
-  { to: '/auditoria', label: 'Auditoría', icon: 'history' },
+  { to: '/operarios', label: 'Operarios', icon: 'shield' },
+  { to: '/auditoria', label: 'Auditoría global', icon: 'history' },
 ]
 
 export default function Sidebar({ isOpen, onClose }) {
