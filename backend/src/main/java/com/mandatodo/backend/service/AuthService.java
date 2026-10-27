@@ -35,7 +35,7 @@ public class AuthService {
     public LoginResponse login(LoginRequest request) {
         String username = request.username() == null ? "" : request.username().trim();
 
-        Operario operario = operarioRepository.findByUsername(username)
+        Operario operario = operarioRepository.findByEmailIgnoreCase(username)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, CREDENCIALES_INVALIDAS));
 
         if (!Boolean.TRUE.equals(operario.getActivo())

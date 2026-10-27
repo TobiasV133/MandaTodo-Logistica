@@ -35,14 +35,12 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         crearOperario(
-                "admin",
                 "Administrador MandáTodo",
                 "admin@mandatodo.local",
                 "Admin123!",
                 Rol.ADMINISTRADOR
         );
         crearOperario(
-                "operario",
                 "Operario MandáTodo",
                 "operario@mandatodo.local",
                 "Operario123!",
@@ -52,10 +50,9 @@ public class DataInitializer implements CommandLineRunner {
         log.warn("Se crearon usuarios iniciales de desarrollo. Cambiá sus contraseñas antes de producción.");
     }
 
-    private void crearOperario(String username, String nombre, String email, String password, Rol rol) {
+    private void crearOperario(String nombre, String email, String password, Rol rol) {
         Operario operario = new Operario();
-        operario.setUsername(username);
-        operario.setNombreCompleto(nombre);
+        operario.setNombre(nombre);
         operario.setEmail(email);
         operario.setPasswordHash(passwordService.hash(password));
         operario.setRol(rol);

@@ -4,17 +4,15 @@ import com.mandatodo.backend.dto.pedido.PedidoRequest;
 import com.mandatodo.backend.dto.pedido.PedidoResponse;
 import com.mandatodo.backend.dto.pedido.ResumenPedidosResponse;
 import com.mandatodo.backend.exception.ApiException;
-import com.mandatodo.backend.model.AuditoriaLog;
 import com.mandatodo.backend.model.Cliente;
 import com.mandatodo.backend.model.EstadoPedido;
-import com.mandatodo.backend.model.Operario;
+import com.mandatodo.backend.model.MotivoRetencion;
 import com.mandatodo.backend.model.Pedido;
-import com.mandatodo.backend.model.RevisionPedido;
+import com.mandatodo.backend.model.Revision;
 import com.mandatodo.backend.model.TipoCliente;
-import com.mandatodo.backend.repository.AuditoriaLogRepository;
-import com.mandatodo.backend.repository.OperarioRepository;
+import com.mandatodo.backend.model.TipoEvento;
 import com.mandatodo.backend.repository.PedidoRepository;
-import com.mandatodo.backend.repository.RevisionPedidoRepository;
+import com.mandatodo.backend.repository.RevisionRepository;
 import com.mandatodo.backend.util.Direcciones;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,32 +30,29 @@ import java.util.concurrent.ThreadLocalRandom;
 public class PedidoService {
 
     private static final DateTimeFormatter FORMATO_CODIGO = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final int MAX_DETALLE_AUDITORIA = 2000;
+    private static final int MAX_DETALLE_AUDITORIA = 500;
 
     private final PedidoRepository pedidoRepository;
     private final ClienteService clienteService;
     private final TarifaService tarifaService;
     private final EstadoPedidoResolver estadoResolver;
-    private final OperarioRepository operarioRepository;
-    private final RevisionPedidoRepository revisionPedidoRepository;
-    private final AuditoriaLogRepository auditoriaLogRepository;
+    private final RevisionRepository revisionRepository;
+    private final AuditoriaService auditoriaService;
 
     public PedidoService(
             PedidoRepository pedidoRepository,
             ClienteService clienteService,
             TarifaService tarifaService,
             EstadoPedidoResolver estadoResolver,
-            OperarioRepository operarioRepository,
-            RevisionPedidoRepository revisionPedidoRepository,
-            AuditoriaLogRepository auditoriaLogRepository
+            RevisionRepository revisionRepository,
+            AuditoriaService auditoriaService
     ) {
         this.pedidoRepository = pedidoRepository;
         this.clienteService = clienteService;
         this.tarifaService = tarifaService;
         this.estadoResolver = estadoResolver;
-        this.operarioRepository = operarioRepository;
-        this.revisionPedidoRepository = revisionPedidoRepository;
-        this.auditoriaLogRepository = auditoriaLogRepository;
+        this.revisionRepository = revisionRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional
@@ -125,7 +120,7 @@ public class PedidoService {
         pedido.setFechaUltimaModificacion(LocalDateTime.now());
 
         Pedido guardado = pedidoRepository.save(pedido);
-        registrarRetencion(guardado, resolucion.observacion());
+        registrarRetencion(guardado, resolucion.motivoRetencion());
         registrarAuditoriaAlta(guardado, idOperario, request.observacionGeo());
 
         String motivoRevision = guardado.getEstado() == EstadoPedido.EN_REVISION
@@ -164,26 +159,18 @@ public class PedidoService {
         );
     }
 
-    private void registrarRetencion(Pedido pedido, String motivo) {
-        if (pedido.getEstado() != EstadoPedido.EN_REVISION) {
+    private void registrarRetencion(Pedido pedido, MotivoRetencion motivo) {
+        if (pedido.getEstado() != EstadoPedido.EN_REVISION || motivo == null) {
             return;
         }
 
-        RevisionPedido revision = new RevisionPedido();
+        Revision revision = new Revision();
         revision.setPedido(pedido);
-        revision.setMotivoRetencion(limitarTexto(
-                motivo == null || motivo.isBlank()
-                        ? "Retención manual por reglas de negocio."
-                        : motivo,
-                255
-        ));
-        revision.setResuelto(false);
-        revisionPedidoRepository.save(revision);
+        revision.setMotivoRetencion(motivo);
+        revisionRepository.save(revision);
     }
 
     private void registrarAuditoriaAlta(Pedido pedido, Integer idOperario, String observacionGeo) {
-        Operario operario = operarioRepository.getReferenceById(idOperario);
-
         StringBuilder detalle = new StringBuilder()
                 .append("Alta de pedido ")
                 .append(pedido.getCodigoPedido())
@@ -194,12 +181,12 @@ public class PedidoService {
             detalle.append(". Validación geográfica: ").append(observacionGeo.trim());
         }
 
-        AuditoriaLog log = new AuditoriaLog();
-        log.setOperario(operario);
-        log.setPedido(pedido);
-        log.setTipoAccion("ALTA_PEDIDO");
-        log.setDetalleModificacion(limitarTexto(detalle.toString(), MAX_DETALLE_AUDITORIA));
-        auditoriaLogRepository.save(log);
+        auditoriaService.registrarEvento(
+                idOperario,
+                pedido.getIdPedido(),
+                limitarTexto(detalle.toString(), MAX_DETALLE_AUDITORIA),
+                TipoEvento.ALTA
+        );
     }
 
     private Map<Integer, String> buscarMotivosRevision(List<Pedido> pedidos) {
@@ -209,9 +196,12 @@ public class PedidoService {
 
         List<Integer> ids = pedidos.stream().map(Pedido::getIdPedido).toList();
         Map<Integer, String> motivos = new HashMap<>();
-        for (RevisionPedidoRepository.MotivoRevisionProjection motivo
-                : revisionPedidoRepository.buscarMotivosVigentes(ids)) {
-            motivos.putIfAbsent(motivo.getIdPedido(), motivo.getMotivo());
+        for (RevisionRepository.MotivoRevisionProjection motivo
+                : revisionRepository.buscarMotivosVigentes(ids)) {
+            motivos.putIfAbsent(
+                    motivo.getIdPedido(),
+                    motivo.getMotivo() == null ? null : motivo.getMotivo().valorApi()
+            );
         }
         return motivos;
     }
@@ -274,7 +264,7 @@ public class PedidoService {
                 pedido.getLongitud(),
                 pedido.getEstado(),
                 direccionIncompleta,
-                pedido.getMotivoFalla(),
+                pedido.getMotivoFalla() == null ? null : pedido.getMotivoFalla().valorApi(),
                 Boolean.TRUE.equals(pedido.getEsReintento()),
                 pedido.getFechaCreacion(),
                 pedido.getFechaProgramadaEntrega(),

@@ -3,6 +3,8 @@ package com.mandatodo.backend.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -13,14 +15,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.util.Objects;
 
+/**
+ * Operario responsable de las acciones registradas en el sistema.
+ *
+ * <p>Mapea la tabla canónica {@code operarios} y conserva alias de
+ * compatibilidad para {@code username}, {@code nombreCompleto} y
+ * {@code activo}.</p>
+ */
 @Entity
 @Table(
         name = "operarios",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_operarios_username", columnNames = "username"),
-                @UniqueConstraint(name = "uk_operarios_email", columnNames = "email")
+                @UniqueConstraint(name = "uq_operarios_email", columnNames = "email")
         }
 )
 @Getter
@@ -30,14 +38,11 @@ public class Operario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_operario")
+    @Column(name = "id_operario", nullable = false, updatable = false)
     private Integer idOperario;
 
-    @Column(name = "username", nullable = false, length = 60)
-    private String username;
-
-    @Column(name = "nombre_completo", nullable = false, length = 150)
-    private String nombreCompleto;
+    @Column(name = "nombre", nullable = false, length = 150)
+    private String nombre;
 
     @Column(name = "email", nullable = false, length = 180)
     private String email;
@@ -49,19 +54,94 @@ public class Operario {
     @Column(name = "rol", nullable = false, columnDefinition = "enum('Admin','Operario')")
     private Rol rol;
 
-    @Column(name = "activo", nullable = false)
-    private Boolean activo = Boolean.TRUE;
-
-    @Column(name = "fecha_alta", nullable = false, updatable = false)
-    private LocalDateTime fechaAlta;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false, columnDefinition = "enum('Activo','Inactivo')")
+    private EstadoOperario estado = EstadoOperario.Activo;
 
     @PrePersist
     void prePersist() {
-        if (fechaAlta == null) {
-            fechaAlta = LocalDateTime.now();
+        if (estado == null) {
+            estado = EstadoOperario.Activo;
         }
-        if (activo == null) {
-            activo = Boolean.TRUE;
+    }
+
+    /**
+     * Alias de compatibilidad: el login histórico usaba {@code username}.
+     */
+    public String getUsername() {
+        return email;
+    }
+
+    /**
+     * Alias de compatibilidad: el login histórico usaba {@code username}.
+     */
+    public void setUsername(String username) {
+        this.email = username;
+    }
+
+    /**
+     * Alias de compatibilidad para el nombre completo original.
+     */
+    public String getNombreCompleto() {
+        return nombre;
+    }
+
+    /**
+     * Alias de compatibilidad para el nombre completo original.
+     */
+    public void setNombreCompleto(String nombreCompleto) {
+        this.nombre = nombreCompleto;
+    }
+
+    /**
+     * Alias de compatibilidad para el estado activo original.
+     */
+    public Boolean getActivo() {
+        return isActivo();
+    }
+
+    /**
+     * Alias de compatibilidad para el estado activo original.
+     */
+    public void setActivo(Boolean activo) {
+        this.estado = Boolean.TRUE.equals(activo)
+                ? EstadoOperario.Activo
+                : EstadoOperario.Inactivo;
+    }
+
+    /**
+     * Indica si el operario se encuentra habilitado para operar.
+     */
+    public boolean isActivo() {
+        return estado == EstadoOperario.Activo;
+    }
+
+    /**
+     * Mantiene el estado canónico no nulo.
+     */
+    public void setEstado(EstadoOperario estado) {
+        this.estado = estado == null ? EstadoOperario.Activo : estado;
+    }
+
+    @Override
+    public boolean equals(Object otro) {
+        if (this == otro) {
+            return true;
         }
+        if (!(otro instanceof Operario operario)) {
+            return false;
+        }
+        if (idOperario != null && operario.idOperario != null) {
+            return Objects.equals(idOperario, operario.idOperario);
+        }
+        return email != null && Objects.equals(email, operario.email);
+    }
+
+    @Override
+    public int hashCode() {
+        if (idOperario != null) {
+            return Objects.hash(idOperario);
+        }
+        return email != null ? Objects.hash(email) : 0;
     }
 }

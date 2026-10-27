@@ -15,7 +15,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
+/**
+ * Cliente de la libreta digital de MandáTodo.
+ *
+ * <p>Modelo canónico del paquete {@code com.mandatodo.backend.model}.
+ * Conserva el mapeo JPA original e incorpora los métodos de conveniencia
+ * y la identidad de la antigua versión local.</p>
+ */
 @Entity
 @Table(
         name = "clientes",
@@ -31,7 +39,7 @@ public class Cliente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_cliente")
+    @Column(name = "id_cliente", nullable = false, updatable = false)
     private Integer idCliente;
 
     @Enumerated(EnumType.STRING)
@@ -60,6 +68,27 @@ public class Cliente {
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
+    /**
+     * Constructor de conveniencia para altas y pruebas.
+     */
+    public Cliente(
+            TipoDocumento tipoDocumento,
+            String numeroDocumento,
+            String nombreRazonSocial,
+            String telefono,
+            String email,
+            TipoCliente tipoCliente,
+            Boolean esFrecuente
+    ) {
+        this.tipoDocumento = tipoDocumento;
+        this.numeroDocumento = numeroDocumento;
+        this.nombreRazonSocial = nombreRazonSocial;
+        this.telefono = telefono;
+        this.email = email;
+        this.tipoCliente = tipoCliente;
+        this.esFrecuente = esFrecuente;
+    }
+
     @PrePersist
     void prePersist() {
         if (fechaCreacion == null) {
@@ -68,5 +97,41 @@ public class Cliente {
         if (esFrecuente == null) {
             esFrecuente = Boolean.FALSE;
         }
+    }
+
+    /**
+     * Alias de lectura para el nombre o razón social.
+     */
+    public String getNombre() {
+        return nombreRazonSocial;
+    }
+
+    /**
+     * Alias de escritura para el nombre o razón social.
+     */
+    public void setNombre(String nombre) {
+        this.nombreRazonSocial = nombre;
+    }
+
+    @Override
+    public boolean equals(Object otro) {
+        if (this == otro) {
+            return true;
+        }
+        if (!(otro instanceof Cliente cliente)) {
+            return false;
+        }
+        if (idCliente != null && cliente.idCliente != null) {
+            return Objects.equals(idCliente, cliente.idCliente);
+        }
+        return numeroDocumento != null && Objects.equals(numeroDocumento, cliente.numeroDocumento);
+    }
+
+    @Override
+    public int hashCode() {
+        if (idCliente != null) {
+            return Objects.hash(idCliente);
+        }
+        return numeroDocumento != null ? Objects.hash(numeroDocumento) : 0;
     }
 }

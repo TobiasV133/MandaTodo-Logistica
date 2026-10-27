@@ -3,7 +3,7 @@
 ## Repository state
 
 - Early scaffold: no source code, manifests, build/test/lint config, or CI yet. Do not assume commands exist.
-- Stack is fixed by the spec: React + Bootstrap + React-Leaflet + Lucide, Spring Boot + Spring Data JPA, MySQL 8.x, OpenStreetMap/Nominatim.
+- Stack is fixed by the spec: React + Bootstrap + React-Leaflet + Lucide, Spring Boot 4.0.8 + Spring Data JPA, MySQL 8.x, OpenStreetMap/Nominatim.
 - OpenSpec CLI 1.11.0 is installed globally. PowerShell blocks `openspec.ps1`, so use `cmd /c "openspec ..."` from the repo root.
 - The project uses the requested `.openspec/` layout, not the CLI-native `openspec/` one. The CLI reports `No OpenSpec root found` for this repo and will not validate `.openspec/specs/manda-todo/manda-todo.spec.md`; do not treat that as a broken spec. Migrate to `openspec/specs/<capability>/spec.md` if CLI validation is required.
 
@@ -44,7 +44,7 @@ MandáTodo es una plataforma logística orientada a la gestión de envíos y paq
 
 ## Arquitectura de Software y Estándares
 
-### Backend (Spring Boot / Java 21)
+### Backend (Spring Boot 4.0.8 / Java 21)
 - **Tipado Estricto:** Evitar el uso de `Object` o genéricos ambiguos. Todas las entidades, DTOs y Servicios deben estar fuertemente tipados.
 - **Arquitectura en Capas:** Controladores (REST) -> Servicios (Reglas) -> Repositorios (JPA) -> Base de Datos.
 - **Inmutabilidad & Lombok:** Uso preferencial de DTOs con `@Value` o Java Records para respuestas API.

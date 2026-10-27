@@ -61,7 +61,9 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 | --- | --- | --- |
 | Frontend | React + Vite, Bootstrap 5, Lucide Icons | Interfaz operativa, tableros, formularios y componentes de gestión. |
 | Mapas & Geolocalización | Leaflet / React-Leaflet, Nominatim API (OpenStreetMap) | Visualización de pedidos y normalización/geocodificación de direcciones. |
-| Backend | Java Spring Boot 3.x, Spring Data JPA / Hibernate | API REST, reglas de negocio, persistencia y auditoría. |
+| Backend | Java 21 + Spring Boot 4.0.8, Spring Data JPA / Hibernate | API REST, reglas de negocio, persistencia y auditoría. |
+| Validación | Jakarta Bean Validation (`jakarta.validation`) | Validación declarativa de DTOs de entrada (`@NotBlank`, `@Email`, `@Size`, etc.). |
+| Seguridad | Spring Security Crypto (BCrypt) + JWT | Hash de contraseñas con `BCryptPasswordEncoder`, autenticación y sesiones de operarios. |
 | Base de Datos | MySQL 8.x (`mandatodo_db`) | Almacenamiento transaccional de clientes, pedidos, revisiones, operarios y auditoría. |
 | Documentación / PDF | OpenPDF / iText | Generación y reimpresión de remitos de entrega en PDF. |
 

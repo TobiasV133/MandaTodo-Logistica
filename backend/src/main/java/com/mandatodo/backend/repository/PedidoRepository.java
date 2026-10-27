@@ -22,6 +22,10 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 
     boolean existsByCodigoPedido(String codigoPedido);
 
+    List<Pedido> findByEstado(EstadoPedido estado);
+
+    List<Pedido> findByClienteIdCliente(Integer idCliente);
+
     /**
      * Un pedido se considera duplicado comercial cuando coincide el cliente, la dirección,
      * la descripción del paquete y fue creado durante el día en curso.
