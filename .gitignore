@@ -1,0 +1,11 @@
+# Entorno local
+.env
+.env.*
+!.env.example
+*.log
+
+# Dependencias y artefactos de build
+node_modules/
+dist/
+dist-ssr/
+coverage/

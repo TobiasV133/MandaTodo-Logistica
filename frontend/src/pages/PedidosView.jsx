@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import PedidoAccionesModal from '../components/pedidos/PedidoAccionesModal'
 import EmptyState from '../components/ui/EmptyState'
 import EstadoBadge from '../components/ui/EstadoBadge'
 import Icon from '../components/ui/Icon'
@@ -18,6 +19,7 @@ export default function PedidosView({ soloRevision = false }) {
   const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
 
   const estadoConsulta = soloRevision ? 'EN_REVISION' : filtro
 
@@ -84,10 +86,10 @@ export default function PedidosView({ soloRevision = false }) {
             <Icon name="mapPin" size={16} /> Dirección ambigua, incompleta o S/N
           </span>
           <span className="review-rules__item">
-            <Icon name="building" size={16} /> Empresa no frecuente con duplicado del día
+            <Icon name="building" size={16} /> Empresa con duplicado del día
           </span>
-          <span className="review-rules__item review-rules__item--ok">
-            <Icon name="star" size={16} /> Cliente frecuente: siempre pasa a Pendiente
+          <span className="review-rules__item">
+            <Icon name="user" size={16} /> Particular: solo revisión por dirección
           </span>
         </div>
       )}
@@ -169,6 +171,7 @@ export default function PedidosView({ soloRevision = false }) {
                   <th>Tarifa</th>
                   <th>Estado</th>
                   <th>Fecha</th>
+                  <th className="text-end">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,12 +198,15 @@ export default function PedidosView({ soloRevision = false }) {
                       <div className="package-cell">
                         <span title={pedido.descripcionPaquete}>{pedido.descripcionPaquete}</span>
                         <small>
-                          {formatPeso(pedido.pesoKg)} kg · {formatPeso(pedido.kilometros)} km
+                          {formatPeso(pedido.pesoKg)} kg
+                          {pedido.kilometros != null ? ` · ${formatPeso(pedido.kilometros)} km` : ''}
                         </small>
                       </div>
                     </td>
                     <td>
-                      <span className="money-cell">{formatMoneda(pedido.precioTotal)}</span>
+                      <span className="money-cell">
+                        {formatMoneda(pedido.montoEnvio ?? pedido.precioTotal)}
+                      </span>
                     </td>
                     <td>
                       <EstadoBadge estado={pedido.estado} />
@@ -215,6 +221,18 @@ export default function PedidosView({ soloRevision = false }) {
                     <td>
                       <span className="date-cell">{formatFechaHora(pedido.fechaCreacion)}</span>
                     </td>
+                    <td className="text-end">
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${
+                          soloRevision ? 'btn-primary' : 'btn-outline-primary'
+                        }`}
+                        onClick={() => setPedidoSeleccionado(pedido)}
+                      >
+                        <Icon name={soloRevision ? 'checkCircle' : 'truck'} size={15} />
+                        {soloRevision ? 'Revisar' : 'Gestionar'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -222,6 +240,16 @@ export default function PedidosView({ soloRevision = false }) {
           </div>
         )}
       </div>
+
+      {pedidoSeleccionado && (
+        <PedidoAccionesModal
+          key={pedidoSeleccionado.idPedido}
+          pedido={pedidoSeleccionado}
+          soloRevision={soloRevision}
+          onClose={() => setPedidoSeleccionado(null)}
+          onUpdated={cargar}
+        />
+      )}
     </div>
   )
 }
