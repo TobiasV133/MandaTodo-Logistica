@@ -27,6 +27,7 @@ export async function cambiarEstadoOperario(operario, estado, idOperario) {
   return actualizarOperario(
     operario.idOperario,
     {
+      username: operario.username,
       nombre: operario.nombre,
       email: operario.email,
       password: '',

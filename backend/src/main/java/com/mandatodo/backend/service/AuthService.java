@@ -4,6 +4,7 @@ import com.mandatodo.backend.dto.auth.LoginRequest;
 import com.mandatodo.backend.dto.auth.LoginResponse;
 import com.mandatodo.backend.dto.auth.OperarioResponse;
 import com.mandatodo.backend.exception.ApiException;
+import com.mandatodo.backend.model.EstadoOperario;
 import com.mandatodo.backend.model.Operario;
 import com.mandatodo.backend.repository.OperarioRepository;
 import com.mandatodo.backend.security.JwtService;
@@ -33,12 +34,18 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        String username = request.username() == null ? "" : request.username().trim();
+        String username = request.username() == null
+                ? ""
+                : request.username().trim().toLowerCase();
 
-        Operario operario = operarioRepository.findByEmailIgnoreCase(username)
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, CREDENCIALES_INVALIDAS));
+        Operario operario = operarioRepository.findByUsernameIgnoreCase(username)
+                .or(() -> operarioRepository.findByEmailIgnoreCase(username))
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Usuario o contraseña incorrectos."
+                ));
 
-        if (!Boolean.TRUE.equals(operario.getActivo())
+        if (operario.getEstado() != EstadoOperario.Activo
                 || !passwordService.matches(request.password(), operario.getPasswordHash())) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, CREDENCIALES_INVALIDAS);
         }
@@ -57,7 +64,7 @@ public class AuthService {
         Operario operario = operarioRepository.findById(idOperario)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "La sesión ya no es válida."));
 
-        if (!Boolean.TRUE.equals(operario.getActivo())) {
+        if (operario.getEstado() != EstadoOperario.Activo) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "El usuario se encuentra inactivo.");
         }
         return OperarioResponse.from(operario);

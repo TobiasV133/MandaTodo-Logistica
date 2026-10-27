@@ -1,9 +1,9 @@
 -- Datos de prueba para MandáTodo Logística
 -- Ejecutar después de schema.sql, con las tablas vacías.
 -- Credenciales de prueba (BCrypt):
---   Admin:             laura.gomez@mandatodo.com / Admin123!
---   Operario activo:   martin.perez@mandatodo.com / Operario123!
---   Operario inactivo: sofia.ramirez@mandatodo.com / Logistica123!
+--   Admin:             lauragomez / Admin123! (laura.gomez@mandatodo.com)
+--   Operario activo:   martinperez / Operario123! (martin.perez@mandatodo.com)
+--   Operario inactivo: sofiaramirez / Logistica123! (sofia.ramirez@mandatodo.com)
 
 USE mandatodo_db;
 
@@ -14,10 +14,10 @@ START TRANSACTION;
 -- ============================================================
 -- 1. Operarios
 -- ============================================================
-INSERT INTO operarios (id_operario, nombre, email, password_hash, rol, estado) VALUES
-  (1, 'Laura Gómez', 'laura.gomez@mandatodo.com', '$2a$10$gF/QrIJ3IRSkMpJjvEwafu.leWcLhHEqG8vSfUtCiO.CVXNyQS6IK', 'Admin', 'Activo'),
-  (2, 'Martín Pérez', 'martin.perez@mandatodo.com', '$2a$10$uRthLFumD7c26HRs.mUVaO2IAYcsx8l7kp26LVwDSNJxGbTwp6Eeu', 'Operario', 'Activo'),
-  (3, 'Sofía Ramírez', 'sofia.ramirez@mandatodo.com', '$2a$10$fznvBPXqbssRbNgrI8HfXu598VI5j1DJ/OBTWjlUadNoQ9IRvwXdO', 'Operario', 'Inactivo');
+INSERT INTO operarios (id_operario, username, nombre, email, password_hash, rol, estado) VALUES
+  (1, 'lauragomez', 'Laura Gómez', 'laura.gomez@mandatodo.com', '$2a$10$gF/QrIJ3IRSkMpJjvEwafu.leWcLhHEqG8vSfUtCiO.CVXNyQS6IK', 'Admin', 'Activo'),
+  (2, 'martinperez', 'Martín Pérez', 'martin.perez@mandatodo.com', '$2a$10$uRthLFumD7c26HRs.mUVaO2IAYcsx8l7kp26LVwDSNJxGbTwp6Eeu', 'Operario', 'Activo'),
+  (3, 'sofiaramirez', 'Sofía Ramírez', 'sofia.ramirez@mandatodo.com', '$2a$10$fznvBPXqbssRbNgrI8HfXu598VI5j1DJ/OBTWjlUadNoQ9IRvwXdO', 'Operario', 'Inactivo');
 
 -- ============================================================
 -- 2. Clientes

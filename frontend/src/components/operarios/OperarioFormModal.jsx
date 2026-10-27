@@ -23,6 +23,7 @@ const ESTADOS = [
 function formInicial(operario) {
   if (!operario) {
     return {
+      username: '',
       nombre: '',
       email: '',
       password: '',
@@ -32,6 +33,7 @@ function formInicial(operario) {
   }
 
   return {
+    username: operario.username ?? '',
     nombre: operario.nombre ?? '',
     email: operario.email ?? '',
     password: '',
@@ -60,6 +62,15 @@ export default function OperarioFormModal({ operario, onClose, onSaved }) {
 
   const validar = () => {
     const next = {}
+
+    if (!form.username.trim()) {
+      next.username = 'El username es obligatorio.'
+    } else if (form.username.trim().length < 4 || form.username.trim().length > 30) {
+      next.username = 'El username debe tener entre 4 y 30 caracteres.'
+    } else if (!/^[a-zA-Z0-9._-]+$/.test(form.username.trim())) {
+      next.username =
+        'Solo se permiten letras, números, puntos, guiones y guiones bajos.'
+    }
 
     if (!form.nombre.trim()) {
       next.nombre = 'El nombre es obligatorio.'
@@ -110,6 +121,7 @@ export default function OperarioFormModal({ operario, onClose, onSaved }) {
         const data = await actualizarOperario(
           operario.idOperario,
           {
+            username: form.username.trim().toLowerCase(),
             nombre: form.nombre.trim(),
             email: form.email.trim().toLowerCase(),
             password: form.password,
@@ -122,6 +134,7 @@ export default function OperarioFormModal({ operario, onClose, onSaved }) {
       } else {
         const data = await crearOperario(
           {
+            username: form.username.trim().toLowerCase(),
             nombre: form.nombre.trim(),
             email: form.email.trim().toLowerCase(),
             password: form.password,
@@ -180,6 +193,26 @@ export default function OperarioFormModal({ operario, onClose, onSaved }) {
         )}
 
         <div className="row g-3">
+          <div className="col-12">
+            <Field
+              label="Username"
+              htmlFor="operario-username"
+              required
+              error={errores.username}
+              hint="Entre 4 y 30 caracteres. Solo letras, números, puntos, guiones y guiones bajos."
+            >
+              <input
+                id="operario-username"
+                className={`form-control ${errores.username ? 'is-invalid' : ''}`}
+                value={form.username}
+                onChange={setCampo('username')}
+                maxLength={30}
+                autoComplete="username"
+                placeholder="Ej. martin.perez"
+              />
+            </Field>
+          </div>
+
           <div className="col-12">
             <Field
               label="Nombre completo"

@@ -57,6 +57,7 @@ export default function OperariosPage() {
 
     return operarios.filter((operario) => {
       const texto = [
+        operario.username,
         operario.nombre,
         operario.email,
         rolLabel(operario.rol),
@@ -189,7 +190,7 @@ export default function OperariosPage() {
             <input
               type="search"
               className="form-control"
-              placeholder="Buscar por nombre, email o rol"
+              placeholder="Buscar por usuario, nombre, email o rol"
               value={busqueda}
               onChange={(event) => setBusqueda(event.target.value)}
               aria-label="Buscar operarios"
@@ -234,6 +235,7 @@ export default function OperariosPage() {
               <thead>
                 <tr>
                   <th>ID</th>
+                  <th>Usuario</th>
                   <th>Nombre completo</th>
                   <th>Email</th>
                   <th>Rol</th>
@@ -251,6 +253,10 @@ export default function OperariosPage() {
                     <tr key={operario.idOperario}>
                       <td>
                         <span className="code-cell">#{operario.idOperario}</span>
+                      </td>
+
+                      <td>
+                        <span className="code-cell">@{operario.username}</span>
                       </td>
 
                       <td>

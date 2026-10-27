@@ -41,12 +41,14 @@ CREATE TABLE clientes (
 -- ============================================================
 CREATE TABLE operarios (
   id_operario INT NOT NULL AUTO_INCREMENT,
+  username VARCHAR(30) NOT NULL,
   nombre VARCHAR(150) NOT NULL,
   email VARCHAR(180) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   rol ENUM('Admin', 'Operario') NOT NULL DEFAULT 'Operario',
   estado ENUM('Activo', 'Inactivo') NOT NULL DEFAULT 'Activo',
   PRIMARY KEY (id_operario),
+  UNIQUE KEY uq_operarios_username (username),
   UNIQUE KEY uq_operarios_email (email),
   KEY idx_operarios_rol (rol),
   KEY idx_operarios_estado (estado)

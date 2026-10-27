@@ -74,7 +74,7 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 - **`clientes`**: libreta digital de clientes. Almacena `tipo_documento`, `numero_documento` (UNIQUE), `nombre_razon_social`, `telefono`, `email`, `tipo_cliente` (`Particular` / `Empresa`) y `es_frecuente`.
 - **`pedidos`**: núcleo operativo. Referencia a `clientes` y registra descripción, peso, monto de envío, estado, motivo de falla, dirección normalizada (`calle`, `altura`, `piso_depto`, `localidad`), coordenadas, fechas y motivo de cancelación en tránsito.
 - **`revisiones`**: bandeja de seguridad. Referencia a `pedidos` y retiene aquellos casos con `Dirección ambigua` o `Posible duplicado comercial`, con resolución `PENDIENTE`, `APROBADO` o `RECHAZADO`.
-- **`operarios`**: usuarios del sistema. Incluye `email` (UNIQUE), `password_hash`, `rol` (`Admin` / `Operario`) y `estado` (`Activo` / `Inactivo`).
+- **`operarios`**: usuarios del sistema. Incluye `username` (UNIQUE, login), `email` (UNIQUE), `password_hash`, `rol` (`Admin` / `Operario`) y `estado` (`Activo` / `Inactivo`).
 - **`auditoria`**: registro global e inalterable. Referencia al `operario` responsable y, opcionalmente, al `pedido`; almacena `actividad`, `tipo_evento` (`Alta`, `Edición`, `Reimpresión`, `Cambio de Estado`) y `fecha_hora`.
 
 ### Diagrama de relaciones

@@ -17,6 +17,18 @@ import jakarta.validation.constraints.Size;
  */
 public record ActualizarUsuarioDTO(
 
+        @NotBlank(message = "El username es obligatorio")
+        @Size(
+                min = 4,
+                max = 30,
+                message = "El username debe tener entre 4 y 30 caracteres"
+        )
+        @Pattern(
+                regexp = "^[a-zA-Z0-9._-]+$",
+                message = "El username solo admite letras, números, puntos, guiones y guiones bajos"
+        )
+        String username,
+
         @NotBlank(message = "El nombre es obligatorio")
         @Size(max = 150, message = "El nombre no puede superar los 150 caracteres")
         String nombre,

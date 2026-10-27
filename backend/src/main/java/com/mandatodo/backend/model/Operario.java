@@ -20,14 +20,15 @@ import java.util.Objects;
 /**
  * Operario responsable de las acciones registradas en el sistema.
  *
- * <p>Mapea la tabla canónica {@code operarios} y conserva alias de
- * compatibilidad para {@code username}, {@code nombreCompleto} y
+ * <p>El {@code username} es el identificador único de inicio de sesión.
+ * Se conservan alias de compatibilidad para {@code nombreCompleto} y
  * {@code activo}.</p>
  */
 @Entity
 @Table(
         name = "operarios",
         uniqueConstraints = {
+                @UniqueConstraint(name = "uq_operarios_username", columnNames = "username"),
                 @UniqueConstraint(name = "uq_operarios_email", columnNames = "email")
         }
 )
@@ -40,6 +41,9 @@ public class Operario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_operario", nullable = false, updatable = false)
     private Integer idOperario;
+
+    @Column(name = "username", nullable = false, length = 30)
+    private String username;
 
     @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;
@@ -63,20 +67,6 @@ public class Operario {
         if (estado == null) {
             estado = EstadoOperario.Activo;
         }
-    }
-
-    /**
-     * Alias de compatibilidad: el login histórico usaba {@code username}.
-     */
-    public String getUsername() {
-        return email;
-    }
-
-    /**
-     * Alias de compatibilidad: el login histórico usaba {@code username}.
-     */
-    public void setUsername(String username) {
-        this.email = username;
     }
 
     /**
@@ -134,7 +124,7 @@ public class Operario {
         if (idOperario != null && operario.idOperario != null) {
             return Objects.equals(idOperario, operario.idOperario);
         }
-        return email != null && Objects.equals(email, operario.email);
+        return username != null && Objects.equals(username, operario.username);
     }
 
     @Override
@@ -142,6 +132,6 @@ public class Operario {
         if (idOperario != null) {
             return Objects.hash(idOperario);
         }
-        return email != null ? Objects.hash(email) : 0;
+        return username != null ? Objects.hash(username) : 0;
     }
 }

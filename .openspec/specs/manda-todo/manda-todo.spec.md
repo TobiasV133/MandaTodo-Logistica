@@ -94,6 +94,7 @@ export interface Revision {
 
 export interface Operario {
   id_operario: number;
+  username: string; // UNIQUE, login
   nombre: string;
   email: string; // UNIQUE
   rol: RolOperario;

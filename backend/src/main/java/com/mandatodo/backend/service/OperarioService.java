@@ -40,21 +40,21 @@ public class OperarioService {
     @Transactional(readOnly = true)
     public List<OperarioDTO> listar() {
         return operarioRepository.findAllByOrderByNombreAsc().stream()
-                .map(OperarioDTO::from)
+                .map(this::convertirToDTO)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<OperarioDTO> listarActivos() {
         return operarioRepository.findByEstadoOrderByNombreAsc(EstadoOperario.Activo).stream()
-                .map(OperarioDTO::from)
+                .map(this::convertirToDTO)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public OperarioDTO buscarPorId(Integer idOperario) {
         return operarioRepository.findById(idOperario)
-                .map(OperarioDTO::from)
+                .map(this::convertirToDTO)
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND,
                         "Operario no encontrado: " + idOperario
@@ -63,7 +63,15 @@ public class OperarioService {
 
     @Transactional
     public OperarioDTO crear(CrearUsuarioDTO dto, Integer idOperarioAuditor) {
+        String username = normalizarUsername(dto.username());
         String email = normalizarEmail(dto.email());
+
+        if (operarioRepository.existsByUsername(username)) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "Ya existe un operario con el username " + username + "."
+            );
+        }
 
         if (operarioRepository.existsByEmail(email)) {
             throw new ApiException(
@@ -73,6 +81,7 @@ public class OperarioService {
         }
 
         Operario operario = new Operario();
+        operario.setUsername(username);
         operario.setNombre(dto.nombre().trim());
         operario.setEmail(email);
         operario.setPasswordHash(hashearPassword(dto.password()));
@@ -84,11 +93,11 @@ public class OperarioService {
         auditoriaService.registrarEvento(
                 idOperarioAuditor,
                 null,
-                "Alta de operario: " + email,
+                "Alta de operario: " + username,
                 TipoEvento.ALTA
         );
 
-        return OperarioDTO.from(guardado);
+        return convertirToDTO(guardado);
     }
 
     @Transactional
@@ -103,7 +112,20 @@ public class OperarioService {
                         "Operario no encontrado: " + idOperario
                 ));
 
+        String username = normalizarUsername(dto.username());
         String email = normalizarEmail(dto.email());
+
+        boolean usernameCambio = operario.getUsername() == null
+                || !operario.getUsername().equalsIgnoreCase(username);
+
+        if (usernameCambio
+                && operarioRepository.existsByUsernameAndIdOperarioNot(username, idOperario)) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "El username " + username + " ya está asociado a otro operario."
+            );
+        }
+
         boolean emailCambio = operario.getEmail() == null
                 || !operario.getEmail().equalsIgnoreCase(email);
 
@@ -115,6 +137,7 @@ public class OperarioService {
             );
         }
 
+        operario.setUsername(username);
         operario.setNombre(dto.nombre().trim());
         operario.setEmail(email);
         operario.setRol(dto.rol());
@@ -129,11 +152,25 @@ public class OperarioService {
         auditoriaService.registrarEvento(
                 idOperarioAuditor,
                 null,
-                "Edición de operario: " + email,
+                "Edición de operario: " + username,
                 TipoEvento.EDICION
         );
 
-        return OperarioDTO.from(guardado);
+        return convertirToDTO(guardado);
+    }
+
+    /**
+     * Mapea la entidad al DTO de salida incluyendo el username.
+     */
+    private OperarioDTO convertirToDTO(Operario operario) {
+        return new OperarioDTO(
+                operario.getIdOperario(),
+                operario.getUsername(),
+                operario.getNombre(),
+                operario.getEmail(),
+                operario.getRol(),
+                operario.getEstado()
+        );
     }
 
     private String hashearPassword(String rawPassword) {
@@ -145,6 +182,21 @@ public class OperarioService {
             );
         }
         return passwordService.hash(rawPassword);
+    }
+
+    private static String normalizarUsername(String username) {
+        if (username == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "El username es obligatorio.");
+        }
+
+        String normalizado = username.trim().toLowerCase(Locale.ROOT);
+        if (normalizado.length() < 4 || normalizado.length() > 30) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "El username debe tener entre 4 y 30 caracteres."
+            );
+        }
+        return normalizado;
     }
 
     private static String normalizarEmail(String email) {
