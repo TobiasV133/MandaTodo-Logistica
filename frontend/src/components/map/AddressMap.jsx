@@ -5,14 +5,25 @@ import Icon from '../ui/Icon'
 
 const CENTRO_CABA = [-34.6037, -58.3816]
 
-function MapFocus({ latitud, longitud }) {
+function MapFocus({ latitud, longitud, seguir }) {
   const map = useMap()
 
   useEffect(() => {
-    if (Number.isFinite(latitud) && Number.isFinite(longitud)) {
+    if (seguir && Number.isFinite(latitud) && Number.isFinite(longitud)) {
       map.flyTo([latitud, longitud], 16, { duration: 0.8 })
     }
-  }, [map, latitud, longitud])
+  }, [map, latitud, longitud, seguir])
+
+  return null
+}
+
+function MapClickHandler({ activo, onElegir }) {
+  useMapEvents({
+    click(evento) {
+      if (!activo) return
+      onElegir(evento.latlng.lat, evento.latlng.lng)
+    },
+  })
 
   return null
 }
@@ -86,7 +97,9 @@ export default function AddressMap({
         <MapFocus
           latitud={tieneCoordenadas ? Number(latitud) : null}
           longitud={tieneCoordenadas ? Number(longitud) : null}
+          seguir={!ajustado}
         />
+        <MapClickHandler activo={ajustable && tieneCoordenadas} onElegir={moverPin} />
         {tieneCoordenadas && (
           <Marker
             position={posicion}
@@ -102,6 +115,13 @@ export default function AddressMap({
         <div className="map-empty-note">
           <Icon name="mapPin" size={16} />
           Validá la dirección para ubicar el pin en el mapa.
+        </div>
+      )}
+
+      {ajustable && tieneCoordenadas && (
+        <div className="map-adjust-note">
+          <Icon name="mapPin" size={15} />
+          Arrastrá el pin o hacé clic en el mapa para ajustar la ubicación exacta.
         </div>
       )}
     </div>

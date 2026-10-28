@@ -16,7 +16,15 @@ function SummaryRow({ label, value, strong = false }) {
   )
 }
 
-export default function ResumenPedido({ cliente, direccion, geo, detalle, tarifa, prediccion }) {
+export default function ResumenPedido({
+  cliente,
+  direccion,
+  geo,
+  detalle,
+  tarifa,
+  prediccion,
+  pinAjustado = false,
+}) {
   const direccionTexto = `${direccion.calle || '—'} ${direccion.altura || 'S/N'}${
     direccion.pisoDepto ? `, ${direccion.pisoDepto}` : ''
   }, ${direccion.localidad || '—'}`
@@ -39,7 +47,7 @@ export default function ResumenPedido({ cliente, direccion, geo, detalle, tarifa
           <SummaryRow label="Tipo de cliente" value={cliente.tipoCliente} />
           <SummaryRow
             label="Cliente frecuente"
-            value={cliente.esFrecuente ? 'Sí · ingreso directo' : 'No'}
+            value={cliente.esFrecuente ? 'Sí' : 'No'}
           />
         </section>
 
@@ -64,6 +72,9 @@ export default function ResumenPedido({ cliente, direccion, geo, detalle, tarifa
             label="Validación geográfica"
             value={geo?.esAmbigua ? 'Ambigua · requiere revisión' : 'Validada'}
           />
+          {pinAjustado && (
+            <SummaryRow label="Pin del mapa" value="Corregido manualmente" />
+          )}
         </section>
 
         <section className="summary-block">
@@ -80,18 +91,24 @@ export default function ResumenPedido({ cliente, direccion, geo, detalle, tarifa
       <aside className="summary-aside">
         <div className="price-panel">
           <span className="price-panel__eyebrow">Tarifa estimada</span>
-          <div className="price-panel__total">{formatMoneda(tarifa.precioTotal)}</div>
-          <div className="price-panel__line">
-            <span>Precio base</span>
-            <strong>{formatMoneda(tarifa.precioBase)}</strong>
-          </div>
-          <div className="price-panel__line">
-            <span>Recargo</span>
-            <strong>{formatMoneda(tarifa.recargo)}</strong>
-          </div>
-          <p className="price-panel__note">
-            El backend recalcula la tarifa al confirmar el pedido.
-          </p>
+          {tarifa.error ? (
+            <p className="text-danger mb-0">{tarifa.error}</p>
+          ) : (
+            <>
+              <div className="price-panel__total">{formatMoneda(tarifa.precioTotal)}</div>
+              <div className="price-panel__line">
+                <span>Precio base</span>
+                <strong>{formatMoneda(tarifa.precioBase)}</strong>
+              </div>
+              <div className="price-panel__line">
+                <span>Recargo por excedente</span>
+                <strong>{formatMoneda(tarifa.recargo)}</strong>
+              </div>
+              <p className="price-panel__note">
+                El backend recalcula la tarifa al confirmar el pedido.
+              </p>
+            </>
+          )}
         </div>
 
         <div className={`prediction-card prediction-card--${prediccion.tone}`}>

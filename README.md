@@ -104,6 +104,7 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 - `pedidos.estado = 'FALLIDO'` exige `motivo_falla` (`Ausente`, `Dirección Inexistente` o `Dirección Incompleta`). El pedido se reprograma para el día siguiente y se aplica un **50% de recargo** sobre `monto_envio`.
 - `pedidos.estado = 'CANCELADO_EN_TRANSITO'` exige `motivo_cancelacion`.
 - Una dirección con altura `0`, calle `S/N` o geocodificación no confiable genera una revisión por `Dirección ambigua` y deja el pedido en `EN_REVISION`.
+- Si la dirección queda ambigua, el operario puede arrastrar el pin o hacer clic en el mapa para corregir la ubicación. El pedido se registra con las coordenadas corregidas, sigue en `EN_REVISION` y la auditoría del alta deja constancia del ajuste manual.
 - Un pedido idéntico de un cliente `Empresa` registrado el mismo día genera una revisión por `Posible duplicado comercial`; para clientes `Particular` el pedido pasa directamente a `PENDIENTE`.
 - La tabla `auditoria` es **append-only**: los triggers `trg_auditoria_no_update` y `trg_auditoria_no_delete` bloquean `UPDATE` y `DELETE` a nivel de base de datos.
 
@@ -111,13 +112,15 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 
 | Método | Endpoint | Descripción |
 | --- | --- | --- |
-| `POST` | `/api/auth/login` | Inicia sesión de un operario. |
+| `POST` | `/api/auth/login` | Inicia sesión con email y contraseña; devuelve un JWT. |
+| `GET` | `/api/auth/me` | Devuelve el operario autenticado a partir del JWT. |
 | `POST` | `/api/geo/normalizar` | Normaliza y geocodifica una dirección mediante Nominatim. |
 | `POST` | `/api/pedidos` | Crea un pedido en `PENDIENTE` o `EN_REVISION` según las reglas. |
 | `GET` | `/api/clientes/buscar?doc=...` | Autocompleta un cliente por DNI/CUIT. |
 | `GET` | `/api/clientes` | Lista todos los clientes. |
 | `PUT` | `/api/clientes/{id}` | Edita los datos de un cliente. |
 | `GET` | `/api/pedidos` | Lista pedidos; acepta el filtro `?estado=...`. |
+| `GET` | `/api/pedidos/resumen` | Totales de pendientes, en revisión, entregados y clientes para el dashboard. |
 | `GET` | `/api/pedidos/{id}` | Obtiene el detalle de un pedido. |
 | `PATCH` | `/api/pedidos/{id}/estado` | Cambia el estado; `FALLIDO` reprograma y aplica el 50% de recargo. |
 | `POST` | `/api/pedidos/{id}/cancelar-transito` | Registra una cancelación en tránsito con motivo. |
@@ -130,6 +133,46 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 | `POST` | `/api/auditoria` | Registra un evento de auditoría. |
 | `GET` | `/api/auditoria` | Consulta el listado general de logs. |
 | `GET` | `/api/auditoria?fecha=...&operario=...` | Consulta auditoría con filtros por fecha y operario. |
+
+> **Estado del corte integrado:** están implementados login/me, geocodificación, listado y búsqueda
+> de clientes, alta/listado/detalle/resumen de pedidos, cambio de estado, revisiones y remitos. El ABM
+> de usuarios, la edición de clientes, la cancelación dedicada y la consulta de auditoría forman
+> parte del contrato objetivo y todavía no están expuestos. La cancelación se resuelve con
+> `PATCH /api/pedidos/{id}/estado` enviando `estado: CANCELADO_EN_TRANSITO` y `motivoCancelacion`.
+> Todos los endpoints salvo el login requieren `Authorization: Bearer <token>`.
+
+## 5.1 Puesta en marcha local
+
+1. Crear y poblar MySQL 8.x:
+
+   ```bash
+   mysql --default-character-set=utf8mb4 -u root -p < schema.sql
+   mysql --default-character-set=utf8mb4 -u root -p < seeds.sql
+   ```
+
+   En PowerShell usá `cmd /c "mysql ... < schema.sql"` para conservar UTF-8.
+
+2. Iniciar el backend:
+
+   ```powershell
+   cd backend
+   $env:DB_USERNAME = "root"
+   $env:DB_PASSWORD = "tu_clave"
+   $env:JWT_SECRET = "una_clave_larga_para_desarrollo"
+   .\mvnw.cmd spring-boot:run
+   ```
+
+3. Iniciar el frontend:
+
+   ```powershell
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+4. Ingresar en `http://localhost:5173` con `laura.gomez@mandatodo.com` / `Admin123!` (usuario de
+   `seeds.sql`). El detalle de variables y endpoints está en `backend/README.md` y
+   `frontend/README.md`.
 
 ## 6. Estrategia de branching (Git Flow)
 

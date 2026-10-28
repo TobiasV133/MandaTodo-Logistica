@@ -10,7 +10,7 @@ export default function LoginView() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -26,14 +26,14 @@ export default function LoginView() {
     event.preventDefault()
     setError('')
 
-    if (!username.trim() || !password) {
-      setError('Ingresá tu usuario y contraseña para continuar.')
+    if (!email.trim() || !password) {
+      setError('Ingresá tu email y contraseña para continuar.')
       return
     }
 
     setLoading(true)
     try {
-      await login({ username: username.trim(), password })
+      await login({ username: email.trim(), password })
       navigate(destino, { replace: true })
     } catch (err) {
       setError(getApiErrorMessage(err, 'No se pudo iniciar sesión. Intentá nuevamente.'))
@@ -62,7 +62,7 @@ export default function LoginView() {
 
         <div className="auth-heading">
           <h1>Acceso al sistema</h1>
-          <p>Ingresá con tus credenciales de operario.</p>
+          <p>Ingresá con tu email y contraseña de operario.</p>
         </div>
 
         {error && (
@@ -74,19 +74,19 @@ export default function LoginView() {
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="mb-3">
-            <label className="form-label field-label" htmlFor="login-username">
-              Usuario
+            <label className="form-label field-label" htmlFor="login-email">
+              Email
             </label>
             <div className="input-with-icon">
-              <Icon name="user" size={18} />
+              <Icon name="mail" size={18} />
               <input
-                id="login-username"
-                type="text"
+                id="login-email"
+                type="email"
                 className="form-control"
-                placeholder="Tu usuario"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                autoComplete="username"
+                placeholder="laura.gomez@mandatodo.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
                 autoFocus
                 disabled={loading}
               />
@@ -135,7 +135,7 @@ export default function LoginView() {
           </button>
         </form>
 
-        <p className="auth-help">Usá las credenciales asignadas por el administrador.</p>
+        <p className="auth-help">Usá el email y la contraseña asignados por el administrador.</p>
 
         <footer className="auth-footer">Sistema interno · Acceso restringido</footer>
       </main>
