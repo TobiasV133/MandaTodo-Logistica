@@ -61,13 +61,13 @@ export function formatPeso(value) {
 }
 
 export function iniciales(nombre) {
-  if (!nombre) return 'MT'
-  return nombre
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0).toUpperCase())
-    .join('')
+  if (typeof nombre !== 'string') return 'MT'
+
+  const partes = nombre.trim().split(/\s+/).filter(Boolean)
+  if (partes.length === 0) return 'MT'
+  if (partes.length === 1) return partes[0].charAt(0).toUpperCase()
+
+  return `${partes[0].charAt(0)}${partes[partes.length - 1].charAt(0)}`.toUpperCase()
 }
 
 export function capitalizar(texto) {

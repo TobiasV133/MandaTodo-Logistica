@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import * as authService from '../services/authService'
+import { decodeJwtPayload } from '../utils/jwt'
 import {
   clearSession,
   readSession,
@@ -38,17 +39,35 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
   }, [logout])
 
-  const value = useMemo(
-    () => ({
+  const operario = useMemo(() => {
+    if (session?.operario) return session.operario
+
+    const claims = decodeJwtPayload(session?.token)
+    if (!claims) return null
+
+    return {
+      idOperario: claims.idOperario ?? null,
+      username: claims.sub ?? claims.username ?? '',
+      nombreCompleto: claims.nombreCompleto ?? '',
+      rol: claims.rol ?? '',
+    }
+  }, [session])
+
+  const value = useMemo(() => {
+    const rol = typeof operario?.rol === 'string'
+      ? operario.rol.trim().toUpperCase()
+      : ''
+
+    return {
       session,
       token: session?.token ?? null,
-      operario: session?.operario ?? null,
+      operario,
       isAuthenticated: Boolean(session?.token),
+      isAdmin: rol === 'ADMINISTRADOR' || rol === 'ADMIN',
       login,
       logout,
-    }),
-    [session, login, logout],
-  )
+    }
+  }, [session, operario, login, logout])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

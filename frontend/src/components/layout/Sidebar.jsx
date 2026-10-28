@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import Icon from '../ui/Icon'
 import { useAuth } from '../../context/AuthContext'
 import { useResumen } from '../../context/ResumenContext'
-import { iniciales } from '../../utils/formatters'
+import { capitalizar, iniciales } from '../../utils/formatters'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Panel', icon: 'dashboard', end: true },
@@ -11,14 +11,28 @@ const NAV_ITEMS = [
   { to: '/pedidos', label: 'Pedidos', icon: 'package' },
   { to: '/en-revision', label: 'En revisión', icon: 'alert', badgeKey: 'enRevision' },
   { to: '/clientes', label: 'Clientes', icon: 'users' },
-  { to: '/usuarios', label: 'Usuarios', icon: 'shield' },
-  { to: '/auditoria', label: 'Auditoría', icon: 'history' },
+  { to: '/usuarios', label: 'Usuarios', icon: 'shield', adminOnly: true },
+  { to: '/auditoria', label: 'Auditoría', icon: 'history', adminOnly: true },
 ]
 
 export default function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate()
-  const { operario, logout } = useAuth()
+  const { operario, logout, isAdmin } = useAuth()
   const { resumen } = useResumen()
+
+  const nombreCompleto =
+    (typeof operario?.nombreCompleto === 'string' && operario.nombreCompleto.trim()) ||
+    (typeof operario?.nombre === 'string' && operario.nombre.trim()) ||
+    (typeof operario?.username === 'string' && operario.username.trim()) ||
+    'Usuario'
+
+  const rolLabel = isAdmin
+    ? 'Administrador'
+    : typeof operario?.rol === 'string' && operario.rol.trim()
+      ? capitalizar(operario.rol.trim())
+      : 'Operario'
+
+  const navItems = isAdmin ? NAV_ITEMS : NAV_ITEMS.filter((item) => !item.adminOnly)
 
   const handleLogout = () => {
     logout()
@@ -48,7 +62,7 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className="sidebar-section-label">Operación</div>
 
       <nav className="sidebar-nav" aria-label="Navegación principal">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const badge = item.badgeKey ? resumen[item.badgeKey] : 0
           return (
             <NavLink
@@ -70,12 +84,12 @@ export default function Sidebar({ isOpen, onClose }) {
 
       <div className="sidebar-footer">
         <div className="sidebar-user">
-          <span className="avatar">{iniciales(operario?.nombreCompleto)}</span>
+          <span className="avatar">{iniciales(nombreCompleto)}</span>
           <span className="sidebar-user__copy">
-            <span className="sidebar-user__name">{operario?.nombreCompleto ?? 'Operario'}</span>
-            <span className="sidebar-user__role">
-              {operario?.rol === 'ADMINISTRADOR' ? 'Administrador' : 'Operario'}
+            <span className="sidebar-user__name" title={nombreCompleto}>
+              {nombreCompleto}
             </span>
+            <span className="sidebar-user__role">{rolLabel}</span>
           </span>
         </div>
         <button type="button" className="sidebar-logout" onClick={handleLogout}>

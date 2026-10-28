@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import AddressMap from '../components/map/AddressMap'
@@ -97,6 +97,12 @@ export default function NuevaCargaView() {
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState('')
   const [pedidoCreado, setPedidoCreado] = useState(null)
+
+  const actualizarUbicacion = useCallback(({ latitud: nuevaLatitud, longitud: nuevaLongitud }) => {
+    setGeo((prev) =>
+      prev ? { ...prev, latitud: nuevaLatitud, longitud: nuevaLongitud } : prev,
+    )
+  }, [])
 
   const claveDireccion = `${direccion.calle.trim().toLowerCase()}|${direccion.altura.trim()}|${direccion.localidad
     .trim()
@@ -849,6 +855,8 @@ export default function NuevaCargaView() {
                       direccion.localidad || 'localidad'
                     }`
                   }
+                  esEditable
+                  onChangeLocation={actualizarUbicacion}
                 />
                 <div className="map-caption">
                   <Icon name="info" size={15} />

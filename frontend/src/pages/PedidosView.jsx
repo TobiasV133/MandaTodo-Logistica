@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import PedidoAccionesModal from '../components/pedidos/PedidoAccionesModal'
 import EmptyState from '../components/ui/EmptyState'
@@ -11,17 +11,48 @@ import { listarPedidos } from '../services/pedidoService'
 import { formatFechaHora, formatMoneda, formatPeso } from '../utils/formatters'
 
 const FILTROS = [{ value: 'TODOS', label: 'Todos' }, ...ESTADOS_LISTA]
+const VALORES_FILTRO = new Set(FILTROS.map((item) => item.value))
+
+function normalizarFiltro(valor) {
+  const estado = typeof valor === 'string' ? valor.trim().toUpperCase() : ''
+  return VALORES_FILTRO.has(estado) ? estado : 'TODOS'
+}
 
 export default function PedidosView({ soloRevision = false }) {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filtroUrl = normalizarFiltro(searchParams.get('estado'))
+  const [filtro, setFiltro] = useState(filtroUrl)
   const [pedidos, setPedidos] = useState([])
-  const [filtro, setFiltro] = useState('TODOS')
   const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFiltro((prev) => (prev === filtroUrl ? prev : filtroUrl))
+  }, [filtroUrl])
+
   const estadoConsulta = soloRevision ? 'EN_REVISION' : filtro
+
+  const cambiarFiltro = useCallback(
+    (nuevoFiltro) => {
+      const filtroNormalizado = normalizarFiltro(nuevoFiltro)
+      const siguientes = new URLSearchParams(searchParams)
+
+      setFiltro(filtroNormalizado)
+
+      if (filtroNormalizado === 'TODOS') {
+        siguientes.delete('estado')
+      } else {
+        siguientes.set('estado', filtroNormalizado)
+      }
+
+      setSearchParams(siguientes)
+    },
+    [searchParams, setSearchParams],
+  )
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -101,7 +132,7 @@ export default function PedidosView({ soloRevision = false }) {
               key={item.value}
               type="button"
               className={`filter-pill ${filtro === item.value ? 'active' : ''}`}
-              onClick={() => setFiltro(item.value)}
+              onClick={() => cambiarFiltro(item.value)}
             >
               {item.label}
             </button>

@@ -4,20 +4,33 @@ import Icon from '../components/ui/Icon'
 import StatCard from '../components/ui/StatCard'
 import { useAuth } from '../context/AuthContext'
 import { useResumen } from '../context/ResumenContext'
+import { capitalizar } from '../utils/formatters'
 
 export default function DashboardView() {
   const navigate = useNavigate()
   const { operario } = useAuth()
   const { resumen, loading, error, refresh } = useResumen()
 
-  const primerNombre = operario?.nombreCompleto?.split(' ')[0] ?? 'operario'
+  const nombreUsuario =
+    typeof operario?.nombreCompleto === 'string'
+      ? operario.nombreCompleto
+      : typeof operario?.nombre === 'string'
+        ? operario.nombre
+        : ''
+  const rolUsuario = typeof operario?.rol === 'string' ? operario.rol.trim() : ''
+  const primerNombre = nombreUsuario.trim().split(/\s+/)[0] || ''
+  const saludo = primerNombre
+    ? `Hola, ${primerNombre}`
+    : rolUsuario
+      ? `Hola, ${capitalizar(rolUsuario)}`
+      : '¡Hola!'
 
   return (
     <div className="page-stack">
       <div className="page-heading">
         <div>
           <span className="page-eyebrow">Resumen operativo</span>
-          <h2>Hola, {primerNombre}</h2>
+          <h2>{saludo}</h2>
           <p>Este es el estado actual de la operación de MandáTodo.</p>
         </div>
         <button type="button" className="btn btn-outline-secondary btn-sm" onClick={refresh}>
@@ -41,6 +54,8 @@ export default function DashboardView() {
           tone="amber"
           hint="Listos para despachar"
           loading={loading}
+          onClick={() => navigate('/pedidos?estado=PENDIENTE')}
+          ariaLabel="Ver pedidos pendientes"
         />
         <StatCard
           label="En revisión"
@@ -49,6 +64,8 @@ export default function DashboardView() {
           tone="rose"
           hint="Requieren validación"
           loading={loading}
+          onClick={() => navigate('/en-revision')}
+          ariaLabel="Ver pedidos en revisión"
         />
         <StatCard
           label="Entregados"
@@ -57,6 +74,8 @@ export default function DashboardView() {
           tone="green"
           hint="Entregas completadas"
           loading={loading}
+          onClick={() => navigate('/pedidos?estado=ENTREGADO')}
+          ariaLabel="Ver pedidos entregados"
         />
         <StatCard
           label="Clientes"
@@ -65,6 +84,8 @@ export default function DashboardView() {
           tone="blue"
           hint="Registrados en el sistema"
           loading={loading}
+          onClick={() => navigate('/clientes')}
+          ariaLabel="Ver clientes"
         />
       </div>
 
