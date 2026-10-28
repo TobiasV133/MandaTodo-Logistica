@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 
 import Icon from '../ui/Icon'
@@ -17,7 +17,42 @@ function MapFocus({ latitud, longitud }) {
   return null
 }
 
-export default function AddressMap({ latitud, longitud, direccion }) {
+/**
+ * Mapa reutilizable de OpenStreetMap / React-Leaflet.
+ *
+ * @param {object} props
+ * @param {number|string|null|undefined} props.latitud - Latitud inicial o controlada.
+ * @param {number|string|null|undefined} props.longitud - Longitud inicial o controlada.
+ * @param {string} [props.direccion] - Texto mostrado en el popup del marcador.
+ * @param {boolean} [props.esEditable=true] - Si es true, el marcador se puede arrastrar.
+ * @param {boolean} [props.readOnly=false] - Alias inverso de `esEditable`; si es true, fuerza el modo lectura.
+ * @param {(coordenadas: { latitud: number, longitud: number }) => void} [props.onChangeLocation]
+ *   Callback invocado al soltar el marcador (`dragend`).
+ * @param {(coordenadas: { latitud: number, longitud: number }) => void} [props.onPositionChange]
+ *   Alias de `onChangeLocation` para mantener compatibilidad entre vistas.
+ */
+export default function AddressMap({
+  latitud,
+  longitud,
+  direccion,
+  esEditable = true,
+  readOnly = false,
+  onChangeLocation,
+  onPositionChange,
+}) {
+  const editable = esEditable && !readOnly
+  const notificarCambio = onChangeLocation ?? onPositionChange
+
+  const handleDragEnd = useCallback(
+    (event) => {
+      if (!editable || typeof notificarCambio !== 'function') return
+
+      const { lat, lng } = event.target.getLatLng()
+      notificarCambio({ latitud: lat, longitud: lng })
+    },
+    [editable, notificarCambio],
+  )
+
   const tieneCoordenadas =
     latitud !== null &&
     latitud !== undefined &&
@@ -26,7 +61,15 @@ export default function AddressMap({ latitud, longitud, direccion }) {
     Number.isFinite(Number(latitud)) &&
     Number.isFinite(Number(longitud))
 
-  const posicion = tieneCoordenadas ? [Number(latitud), Number(longitud)] : CENTRO_CABA
+  const posicion = useMemo(
+    () => (tieneCoordenadas ? [Number(latitud), Number(longitud)] : CENTRO_CABA),
+    [tieneCoordenadas, latitud, longitud],
+  )
+
+  const eventHandlers = useMemo(
+    () => (editable ? { dragend: handleDragEnd } : undefined),
+    [editable, handleDragEnd],
+  )
 
   return (
     <div className="map-shell">
@@ -45,7 +88,11 @@ export default function AddressMap({ latitud, longitud, direccion }) {
           longitud={tieneCoordenadas ? Number(longitud) : null}
         />
         {tieneCoordenadas && (
-          <Marker position={posicion}>
+          <Marker
+            position={posicion}
+            draggable={editable}
+            eventHandlers={eventHandlers}
+          >
             <Popup>{direccion || 'Ubicación validada'}</Popup>
           </Marker>
         )}

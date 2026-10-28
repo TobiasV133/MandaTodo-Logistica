@@ -60,16 +60,10 @@ export default function ClientesView() {
           <h2>Clientes</h2>
           <p>Personas y empresas que ya operaron con MandáTodo.</p>
         </div>
-        <div className="d-flex gap-2">
-          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={cargar} disabled={loading}>
-            <Icon name="refresh" size={16} />
-            Actualizar
-          </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => navigate('/nueva-carga')}>
-            <Icon name="plus" size={16} />
-            Nueva carga
-          </button>
-        </div>
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={cargar} disabled={loading}>
+          <Icon name="refresh" size={16} />
+          Actualizar
+        </button>
       </div>
 
       <div className="panel panel--table">
