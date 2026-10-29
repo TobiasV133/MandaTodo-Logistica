@@ -46,6 +46,9 @@ export function getApiErrorMessage(error, fallback = 'Ocurrió un error inespera
   if (!error?.response) {
     return 'No se pudo conectar con el servidor. Verificá que el backend esté iniciado.'
   }
+  if ([502, 503, 504].includes(error.response.status)) {
+    return 'No se pudo conectar con el backend. Verificá que esté iniciado en http://localhost:8080.'
+  }
   return fallback
 }
 

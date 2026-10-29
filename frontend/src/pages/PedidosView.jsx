@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
+import PedidoAccionesModal from '../components/pedidos/PedidoAccionesModal'
 import EmptyState from '../components/ui/EmptyState'
 import EstadoBadge from '../components/ui/EstadoBadge'
 import Icon from '../components/ui/Icon'
@@ -10,16 +11,48 @@ import { listarPedidos } from '../services/pedidoService'
 import { formatFechaHora, formatMoneda, formatPeso } from '../utils/formatters'
 
 const FILTROS = [{ value: 'TODOS', label: 'Todos' }, ...ESTADOS_LISTA]
+const VALORES_FILTRO = new Set(FILTROS.map((item) => item.value))
+
+function normalizarFiltro(valor) {
+  const estado = typeof valor === 'string' ? valor.trim().toUpperCase() : ''
+  return VALORES_FILTRO.has(estado) ? estado : 'TODOS'
+}
 
 export default function PedidosView({ soloRevision = false }) {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filtroUrl = normalizarFiltro(searchParams.get('estado'))
+  const [filtro, setFiltro] = useState(filtroUrl)
   const [pedidos, setPedidos] = useState([])
-  const [filtro, setFiltro] = useState('TODOS')
   const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFiltro((prev) => (prev === filtroUrl ? prev : filtroUrl))
+  }, [filtroUrl])
 
   const estadoConsulta = soloRevision ? 'EN_REVISION' : filtro
+
+  const cambiarFiltro = useCallback(
+    (nuevoFiltro) => {
+      const filtroNormalizado = normalizarFiltro(nuevoFiltro)
+      const siguientes = new URLSearchParams(searchParams)
+
+      setFiltro(filtroNormalizado)
+
+      if (filtroNormalizado === 'TODOS') {
+        siguientes.delete('estado')
+      } else {
+        siguientes.set('estado', filtroNormalizado)
+      }
+
+      setSearchParams(siguientes)
+    },
+    [searchParams, setSearchParams],
+  )
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -59,7 +92,7 @@ export default function PedidosView({ soloRevision = false }) {
   }, [pedidos, busqueda])
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-stack--fill">
       <div className="page-heading">
         <div>
           <span className="page-eyebrow">
@@ -84,10 +117,10 @@ export default function PedidosView({ soloRevision = false }) {
             <Icon name="mapPin" size={16} /> Dirección ambigua, incompleta o S/N
           </span>
           <span className="review-rules__item">
-            <Icon name="building" size={16} /> Empresa no frecuente con duplicado del día
+            <Icon name="building" size={16} /> Empresa con duplicado del día
           </span>
-          <span className="review-rules__item review-rules__item--ok">
-            <Icon name="star" size={16} /> Cliente frecuente: siempre pasa a Pendiente
+          <span className="review-rules__item">
+            <Icon name="user" size={16} /> Particular: solo revisión por dirección
           </span>
         </div>
       )}
@@ -99,7 +132,7 @@ export default function PedidosView({ soloRevision = false }) {
               key={item.value}
               type="button"
               className={`filter-pill ${filtro === item.value ? 'active' : ''}`}
-              onClick={() => setFiltro(item.value)}
+              onClick={() => cambiarFiltro(item.value)}
             >
               {item.label}
             </button>
@@ -169,6 +202,7 @@ export default function PedidosView({ soloRevision = false }) {
                   <th>Tarifa</th>
                   <th>Estado</th>
                   <th>Fecha</th>
+                  <th className="text-end">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,12 +229,15 @@ export default function PedidosView({ soloRevision = false }) {
                       <div className="package-cell">
                         <span title={pedido.descripcionPaquete}>{pedido.descripcionPaquete}</span>
                         <small>
-                          {formatPeso(pedido.pesoKg)} kg · {formatPeso(pedido.kilometros)} km
+                          {formatPeso(pedido.pesoKg)} kg
+                          {pedido.kilometros != null ? ` · ${formatPeso(pedido.kilometros)} km` : ''}
                         </small>
                       </div>
                     </td>
                     <td>
-                      <span className="money-cell">{formatMoneda(pedido.precioTotal)}</span>
+                      <span className="money-cell">
+                        {formatMoneda(pedido.montoEnvio ?? pedido.precioTotal)}
+                      </span>
                     </td>
                     <td>
                       <EstadoBadge estado={pedido.estado} />
@@ -215,6 +252,18 @@ export default function PedidosView({ soloRevision = false }) {
                     <td>
                       <span className="date-cell">{formatFechaHora(pedido.fechaCreacion)}</span>
                     </td>
+                    <td className="text-end">
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${
+                          soloRevision ? 'btn-primary' : 'btn-outline-primary'
+                        }`}
+                        onClick={() => setPedidoSeleccionado(pedido)}
+                      >
+                        <Icon name={soloRevision ? 'checkCircle' : 'truck'} size={15} />
+                        {soloRevision ? 'Revisar' : 'Gestionar'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -222,6 +271,16 @@ export default function PedidosView({ soloRevision = false }) {
           </div>
         )}
       </div>
+
+      {pedidoSeleccionado && (
+        <PedidoAccionesModal
+          key={pedidoSeleccionado.idPedido}
+          pedido={pedidoSeleccionado}
+          soloRevision={soloRevision}
+          onClose={() => setPedidoSeleccionado(null)}
+          onUpdated={cargar}
+        />
+      )}
     </div>
   )
 }

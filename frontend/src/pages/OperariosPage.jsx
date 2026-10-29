@@ -12,11 +12,13 @@ import {
 import { iniciales } from '../utils/formatters'
 
 function rolLabel(rol) {
-  return rol === 'ADMINISTRADOR' ? 'ADMIN' : 'OPERARIO'
+  return rol === 'Admin' || rol === 'ADMINISTRADOR' ? 'ADMIN' : 'OPERARIO'
 }
 
 function rolBadge(rol) {
-  return rol === 'ADMINISTRADOR' ? 'bg-primary' : 'bg-info text-dark'
+  return rol === 'Admin' || rol === 'ADMINISTRADOR'
+    ? 'bg-primary'
+    : 'bg-info text-dark'
 }
 
 export default function OperariosPage() {
@@ -118,7 +120,7 @@ export default function OperariosPage() {
   }
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-stack--fill">
       <div className="page-heading">
         <div>
           <span className="page-eyebrow">Seguridad</span>

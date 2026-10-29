@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "jdk",
+      "name": "Backend: Spring Boot",
+      "request": "launch",
+      "mainClass": "com.mandatodo.logistica.MandaTodoApplication",
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "DB_USERNAME": "root",
+        "DB_PASSWORD": "${input:dbPassword}"
+      }
+    },
+    {
+      "type": "node",
+      "name": "Frontend: Vite",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "${workspaceFolder}/frontend/node_modules/vite/bin/vite.js",
+        "--host",
+        "localhost",
+        "--open"
+      ],
+      "cwd": "${workspaceFolder}/frontend",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full stack: backend + frontend",
+      "configurations": ["Backend: Spring Boot", "Frontend: Vite"],
+      "stopAll": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "dbPassword",
+      "type": "promptString",
+      "description": "Contraseña de MySQL para DB_PASSWORD (dejar vacío si no tiene)",
+      "password": true
+    }
+  ]
+}

@@ -62,7 +62,7 @@ export default function LoginView() {
 
         <div className="auth-heading">
           <h1>Acceso al sistema</h1>
-          <p>Ingresá con tus credenciales de operario.</p>
+          <p>Ingresá con tu usuario y contraseña de operario.</p>
         </div>
 
         {error && (
@@ -135,7 +135,7 @@ export default function LoginView() {
           </button>
         </form>
 
-        <p className="auth-help">Usá las credenciales asignadas por el administrador.</p>
+        <p className="auth-help">Usá el usuario y la contraseña asignados por el administrador.</p>
 
         <footer className="auth-footer">Sistema interno · Acceso restringido</footer>
       </main>

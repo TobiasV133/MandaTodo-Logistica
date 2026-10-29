@@ -11,8 +11,8 @@ import {
 } from '../../services/operarioService'
 
 const ROLES = [
-  { value: 'ADMINISTRADOR', label: 'ADMIN (Administrador)' },
-  { value: 'OPERARIO', label: 'OPERARIO' },
+  { value: 'Admin', label: 'ADMIN (Administrador)' },
+  { value: 'Operario', label: 'OPERARIO' },
 ]
 
 const ESTADOS = [
@@ -27,7 +27,7 @@ function formInicial(operario) {
       nombre: '',
       email: '',
       password: '',
-      rol: 'OPERARIO',
+      rol: 'Operario',
       estado: 'Activo',
     }
   }
@@ -37,7 +37,7 @@ function formInicial(operario) {
     nombre: operario.nombre ?? '',
     email: operario.email ?? '',
     password: '',
-    rol: operario.rol ?? 'OPERARIO',
+    rol: operario.rol ?? 'Operario',
     estado: operario.estado ?? 'Activo',
   }
 }
@@ -157,6 +157,7 @@ export default function OperarioFormModal({ operario, onClose, onSaved }) {
     <Modal
       open
       title={editando ? 'Editar operario' : 'Nuevo operario'}
+      size="modal-dialog-scrollable"
       onClose={cerrar}
       footer={
         <>

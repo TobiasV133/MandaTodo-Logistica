@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import AddressMap from '../components/map/AddressMap'
@@ -25,7 +25,16 @@ import {
   formatFechaLarga,
   formatMoneda,
 } from '../utils/formatters'
-import { calcularTarifa } from '../utils/tarifas'
+import {
+  calcularTarifa,
+  MAX_KILOMETROS,
+  MAX_PESO_KG,
+  MENSAJE_CAPACIDAD,
+  RECARGO_POR_KG,
+  RECARGO_POR_KM,
+  TARIFA_BASE,
+  TARIFA_MEDIA,
+} from '../utils/tarifas'
 
 const CLIENTE_INICIAL = {
   tipoDocumento: 'DNI',
@@ -78,6 +87,7 @@ export default function NuevaCargaView() {
   const [direccion, setDireccion] = useState(DIRECCION_INICIAL)
   const [geo, setGeo] = useState(null)
   const [claveValidada, setClaveValidada] = useState('')
+  const [pinAjustado, setPinAjustado] = useState(null)
   const [validandoGeo, setValidandoGeo] = useState(false)
   const [errorGeo, setErrorGeo] = useState('')
 
@@ -87,6 +97,12 @@ export default function NuevaCargaView() {
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState('')
   const [pedidoCreado, setPedidoCreado] = useState(null)
+
+  const actualizarUbicacion = useCallback(({ latitud: nuevaLatitud, longitud: nuevaLongitud }) => {
+    setGeo((prev) =>
+      prev ? { ...prev, latitud: nuevaLatitud, longitud: nuevaLongitud } : prev,
+    )
+  }, [])
 
   const claveDireccion = `${direccion.calle.trim().toLowerCase()}|${direccion.altura.trim()}|${direccion.localidad
     .trim()
@@ -100,20 +116,31 @@ export default function NuevaCargaView() {
   const calleSinNumero = direccion.calle.trim().toLowerCase() === 's/n'
   const esAmbigua = Boolean(geo?.esAmbigua) || alturaInvalida || calleSinNumero
 
-  const tarifa = useMemo(
-    () => calcularTarifa(detalle.pesoKg, detalle.kilometros),
-    [detalle.pesoKg, detalle.kilometros],
-  )
+  const geoEfectivo = useMemo(() => {
+    if (!geo) return null
+    if (!pinAjustado) return geo
+    return { ...geo, latitud: pinAjustado.latitud, longitud: pinAjustado.longitud }
+  }, [geo, pinAjustado])
 
-  const prediccion = useMemo(() => {
-    if (cliente.esFrecuente) {
+  const ajustarPin = (latitud, longitud) => {
+    if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) return
+    setPinAjustado({ latitud, longitud })
+  }
+
+  const tarifa = useMemo(() => {
+    try {
+      return calcularTarifa(detalle.pesoKg, detalle.kilometros)
+    } catch (error) {
       return {
-        tone: 'success',
-        icon: 'checkCircle',
-        title: 'Ingresará como PENDIENTE',
-        detail: 'Los clientes frecuentes nunca pasan por revisión, incluso si hay un duplicado.',
+        precioBase: 0,
+        recargo: 0,
+        precioTotal: 0,
+        error: error instanceof Error ? error.message : MENSAJE_CAPACIDAD,
       }
     }
+  }, [detalle.pesoKg, detalle.kilometros])
+
+  const prediccion = useMemo(() => {
     if (esAmbigua || !direccionValidada) {
       return {
         tone: 'warning',
@@ -136,7 +163,7 @@ export default function NuevaCargaView() {
       title: 'Ingresará como PENDIENTE',
       detail: 'El pedido cumple las condiciones para pasar directo a la bandeja de despacho.',
     }
-  }, [cliente.esFrecuente, cliente.tipoCliente, esAmbigua, direccionValidada])
+  }, [cliente.tipoCliente, esAmbigua, direccionValidada])
 
   useEffect(() => {
     const completo = documentoCompleto(cliente.tipoDocumento, cliente.numeroDocumento)
@@ -281,10 +308,14 @@ export default function NuevaCargaView() {
     const peso = Number(detalle.pesoKg)
     if (!Number.isFinite(peso) || peso <= 0) {
       nuevos.pesoKg = 'El peso debe ser mayor a 0.'
+    } else if (peso > MAX_PESO_KG) {
+      nuevos.pesoKg = MENSAJE_CAPACIDAD
     }
     const kilometros = Number(detalle.kilometros)
     if (!Number.isFinite(kilometros) || kilometros < 0 || detalle.kilometros === '') {
       nuevos.kilometros = 'Ingresá los kilómetros del recorrido.'
+    } else if (kilometros > MAX_KILOMETROS) {
+      nuevos.kilometros = MENSAJE_CAPACIDAD
     }
     setErrores(nuevos)
     return Object.keys(nuevos).length === 0
@@ -315,6 +346,7 @@ export default function NuevaCargaView() {
 
     setValidandoGeo(true)
     setErrorGeo('')
+    setPinAjustado(null)
 
     try {
       const data = await normalizarDireccion({
@@ -343,7 +375,7 @@ export default function NuevaCargaView() {
   }
 
   const confirmarPedido = async () => {
-    if (!direccionValidada || !geo) {
+    if (!direccionValidada || !geoEfectivo) {
       setErrorEnvio('La dirección debe estar validada antes de confirmar el pedido.')
       return
     }
@@ -368,9 +400,10 @@ export default function NuevaCargaView() {
       altura,
       pisoDepto: direccion.pisoDepto.trim() || null,
       localidad: direccion.localidad.trim(),
-      latitud: Number(geo.latitud),
-      longitud: Number(geo.longitud),
+      latitud: Number(geoEfectivo.latitud),
+      longitud: Number(geoEfectivo.longitud),
       esAmbigua: Boolean(esAmbigua),
+      pinAjustado: Boolean(pinAjustado),
       observacionGeo: geo.observacion ?? null,
     }
 
@@ -398,6 +431,7 @@ export default function NuevaCargaView() {
     setDireccion({ ...DIRECCION_INICIAL })
     setGeo(null)
     setClaveValidada('')
+    setPinAjustado(null)
     setErrorGeo('')
     setDetalle({ ...DETALLE_INICIAL })
     setErrores({})
@@ -406,6 +440,9 @@ export default function NuevaCargaView() {
   }
 
   if (pedidoCreado) {
+    const creado = pedidoCreado.pedido ?? pedidoCreado
+    const motivosRetencion = pedidoCreado.retencion?.motivos?.join(' y ')
+
     return (
       <div className="wizard-card">
         <div className="success-card">
@@ -415,33 +452,37 @@ export default function NuevaCargaView() {
           <span className="page-eyebrow">Alta completada</span>
           <h2>Pedido registrado</h2>
           <p>
-            El pedido <strong>{pedidoCreado.codigoPedido}</strong> se guardó correctamente el{' '}
+            El pedido <strong>{creado.codigoPedido}</strong> se guardó correctamente el{' '}
             {formatFechaLarga()}.
           </p>
 
           <div className="success-card__badge">
-            <EstadoBadge estado={pedidoCreado.estado} />
+            <EstadoBadge estado={creado.estado} />
           </div>
 
-          {pedidoCreado.estado === 'EN_REVISION' && (
+          {creado.estado === 'EN_REVISION' && (
             <div className="alert alert-warning text-start" role="status">
               <strong>El pedido quedó retenido en revisión.</strong>
-              <div>{pedidoCreado.observacion || 'Requiere validación manual antes de despacharse.'}</div>
+              <div>
+                {motivosRetencion ||
+                  creado.motivoRevision ||
+                  'Requiere validación manual antes de despacharse.'}
+              </div>
             </div>
           )}
 
           <div className="success-summary">
             <div>
               <span>Cliente</span>
-              <strong>{pedidoCreado.nombreCliente}</strong>
+              <strong>{creado.nombreCliente}</strong>
             </div>
             <div>
               <span>Dirección</span>
-              <strong>{pedidoCreado.direccionCompleta}</strong>
+              <strong>{creado.direccionCompleta}</strong>
             </div>
             <div>
               <span>Total</span>
-              <strong>{formatMoneda(pedidoCreado.precioTotal)}</strong>
+              <strong>{formatMoneda(creado.montoEnvio ?? creado.precioTotal)}</strong>
             </div>
           </div>
 
@@ -453,9 +494,9 @@ export default function NuevaCargaView() {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => navigate(pedidoCreado.estado === 'EN_REVISION' ? '/en-revision' : '/pedidos')}
+              onClick={() => navigate(creado.estado === 'EN_REVISION' ? '/en-revision' : '/pedidos')}
             >
-              {pedidoCreado.estado === 'EN_REVISION' ? 'Ir a la bandeja' : 'Ver pedidos'}
+              {creado.estado === 'EN_REVISION' ? 'Ir a la bandeja' : 'Ver pedidos'}
               <Icon name="arrowRight" size={17} />
             </button>
           </div>
@@ -641,7 +682,7 @@ export default function NuevaCargaView() {
                   <Icon name="star" size={16} />
                   Cliente frecuente
                 </strong>
-                <p>Los clientes frecuentes ingresan directo a Pendiente y nunca pasan por revisión.</p>
+                <p>Se usa para identificar clientes recurrentes; no exime las reglas de revisión por dirección.</p>
               </div>
               <div className="form-check form-switch">
                 <input
@@ -666,7 +707,7 @@ export default function NuevaCargaView() {
             <StepHeader
               number={2}
               title="Dirección y validación geográfica"
-              description="Usamos OpenStreetMap / Nominatim para normalizar la dirección y ubicar el pin."
+              description="Usamos OpenStreetMap / Nominatim para normalizar la dirección y ubicar el pin. Si no encontramos la altura exacta, ubicamos la calle o la localidad y el pedido pasa a revisión."
             />
 
             <div className="address-layout">
@@ -779,9 +820,22 @@ export default function NuevaCargaView() {
                     <small>{geo.direccionNormalizada}</small>
                     {esAmbigua && (
                       <div className="geo-result__note">
-                        {cliente.esFrecuente
-                          ? 'Como el cliente es frecuente, el pedido ingresará directo a Pendiente.'
-                          : 'El pedido quedará en En revisión para validación manual.'}
+                        El pedido quedará en En revisión para validación manual.
+                      </div>
+                    )}
+                    {pinAjustado && (
+                      <div className="geo-result__adjust">
+                        <span>
+                          Pin corregido manualmente: {Number(pinAjustado.latitud).toFixed(6)},{' '}
+                          {Number(pinAjustado.longitud).toFixed(6)}
+                        </span>
+                        <button
+                          type="button"
+                          className="geo-result__reset"
+                          onClick={() => setPinAjustado(null)}
+                        >
+                          Restablecer
+                        </button>
                       </div>
                     )}
                   </div>
@@ -790,14 +844,19 @@ export default function NuevaCargaView() {
 
               <div className="address-map-panel">
                 <AddressMap
-                  latitud={geo?.latitud}
-                  longitud={geo?.longitud}
+                  latitud={geoEfectivo?.latitud}
+                  longitud={geoEfectivo?.longitud}
+                  ajustable={esAmbigua}
+                  ajustado={Boolean(pinAjustado)}
+                  onAjustar={ajustarPin}
                   direccion={
                     geo?.direccionNormalizada ||
                     `${direccion.calle || 'Dirección'} ${direccion.altura || 'S/N'}, ${
                       direccion.localidad || 'localidad'
                     }`
                   }
+                  esEditable
+                  onChangeLocation={actualizarUbicacion}
                 />
                 <div className="map-caption">
                   <Icon name="info" size={15} />
@@ -843,6 +902,7 @@ export default function NuevaCargaView() {
                       type="number"
                       inputMode="decimal"
                       min="0.01"
+                      max={MAX_PESO_KG}
                       step="0.01"
                       name="pesoKg"
                       className={`form-control ${errores.pesoKg ? 'is-invalid' : ''}`}
@@ -862,6 +922,7 @@ export default function NuevaCargaView() {
                       type="number"
                       inputMode="decimal"
                       min="0"
+                      max={MAX_KILOMETROS}
                       step="0.1"
                       name="kilometros"
                       className={`form-control ${errores.kilometros ? 'is-invalid' : ''}`}
@@ -875,24 +936,34 @@ export default function NuevaCargaView() {
               </div>
             </div>
 
-            <div className="price-preview">
-              <div className="price-preview__row">
-                <span>Precio base</span>
-                <strong>{formatMoneda(tarifa.precioBase)}</strong>
+            {tarifa.error ? (
+              <div className="alert alert-warning d-flex align-items-start gap-2" role="alert">
+                <Icon name="alert" size={18} />
+                <span>{tarifa.error}</span>
               </div>
-              <div className="price-preview__row">
-                <span>Recargo</span>
-                <strong>{formatMoneda(tarifa.recargo)}</strong>
+            ) : (
+              <div className="price-preview">
+                <div className="price-preview__row">
+                  <span>Precio base</span>
+                  <strong>{formatMoneda(tarifa.precioBase)}</strong>
+                </div>
+                <div className="price-preview__row">
+                  <span>Recargo por excedente</span>
+                  <strong>{formatMoneda(tarifa.recargo)}</strong>
+                </div>
+                <div className="price-preview__row price-preview__row--total">
+                  <span>Total estimado</span>
+                  <strong>{formatMoneda(tarifa.precioTotal)}</strong>
+                </div>
               </div>
-              <div className="price-preview__row price-preview__row--total">
-                <span>Total estimado</span>
-                <strong>{formatMoneda(tarifa.precioTotal)}</strong>
-              </div>
-            </div>
+            )}
 
             <p className="tariff-note">
-              Tarifa calculada con cargo fijo de {formatMoneda(2500)}, {formatMoneda(450)} por km y{' '}
-              {formatMoneda(180)} por kg. El backend recalcula el importe al confirmar.
+              Tarifa escalonada: {formatMoneda(TARIFA_BASE)} hasta 5 kg y 5 km;{' '}
+              {formatMoneda(TARIFA_MEDIA)} si supera 5 kg o 5 km, hasta 20 kg y 15 km;{' '}
+              {formatMoneda(RECARGO_POR_KM)} por km extra y {formatMoneda(RECARGO_POR_KG)} por kg
+              extra. Máximo {MAX_PESO_KG} kg / {MAX_KILOMETROS} km. El backend recalcula el importe
+              al confirmar.
             </p>
           </section>
         )}
@@ -908,10 +979,11 @@ export default function NuevaCargaView() {
             <ResumenPedido
               cliente={cliente}
               direccion={direccion}
-              geo={geo}
+              geo={geoEfectivo}
               detalle={detalle}
               tarifa={tarifa}
               prediccion={prediccion}
+              pinAjustado={Boolean(pinAjustado)}
             />
 
             {errorEnvio && (

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import AppLayout from './components/layout/AppLayout'
+import AdminRoute from './components/layout/AdminRoute'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import AuditoriaPage from './pages/AuditoriaPage'
 import ClientesPage from './pages/ClientesPage'
@@ -23,9 +24,12 @@ export default function App() {
           <Route path="pedidos" element={<PedidosView />} />
           <Route path="en-revision" element={<PedidosView soloRevision />} />
           <Route path="clientes" element={<ClientesPage />} />
-          <Route path="operarios" element={<OperariosPage />} />
-          <Route path="usuarios" element={<OperariosPage />} />
-          <Route path="auditoria" element={<AuditoriaPage />} />
+
+          <Route element={<AdminRoute />}>
+            <Route path="operarios" element={<OperariosPage />} />
+            <Route path="usuarios" element={<OperariosPage />} />
+            <Route path="auditoria" element={<AuditoriaPage />} />
+          </Route>
         </Route>
       </Route>
 
