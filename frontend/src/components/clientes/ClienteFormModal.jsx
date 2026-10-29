@@ -151,6 +151,7 @@ export default function ClienteFormModal({ cliente, onClose, onSaved }) {
     <Modal
       open
       title={editando ? 'Editar cliente' : 'Nuevo cliente'}
+      size="modal-dialog-scrollable"
       onClose={cerrar}
       footer={
         <>
@@ -178,7 +179,7 @@ export default function ClienteFormModal({ cliente, onClose, onSaved }) {
         </>
       }
     >
-      <form id="cliente-form" onSubmit={guardar} noValidate>
+      <form id="cliente-form" className="modal-form-scroll" onSubmit={guardar} noValidate>
         {serverError && (
           <div className="alert alert-danger d-flex align-items-center gap-2" role="alert">
             <Icon name="alert" size={18} />

@@ -87,7 +87,7 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-stack--fill">
       <div className="page-heading">
         <div>
           <span className="page-eyebrow">Base comercial</span>

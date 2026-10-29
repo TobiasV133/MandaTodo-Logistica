@@ -2704,6 +2704,13 @@ a {
   padding: 20px;
 }
 
+/* Scroll interno del formulario: evita que el modal desborde el viewport. */
+.modal-form-scroll {
+  max-height: 85vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .modal-footer {
   padding: 14px 20px;
   border-top: 1px solid #eef2f7;
