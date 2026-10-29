@@ -10,8 +10,8 @@ import java.math.BigDecimal;
  * Datos de la impresión de un remito.
  *
  * <p>{@code motivoReimpresion} es obligatorio a partir de la segunda impresión del mismo pedido.
- * {@code kilometros} es opcional porque el esquema MySQL no guarda los kilómetros del pedido: el
- * operario puede informarlos para que queden impresos en el documento.</p>
+ * {@code kilometros} es opcional: si se omite, el remito imprime la distancia guardada al dar de
+ * alta el pedido. El operario puede informarla para corregirla en el documento.</p>
  */
 public record ImprimirRemitoRequest(
     // Opcional: en producción el operario se toma del JWT.

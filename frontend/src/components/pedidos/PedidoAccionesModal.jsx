@@ -589,7 +589,7 @@ export default function PedidoAccionesModal({
                     </div>
                     <div className="col-md-3">
                       <label className="form-label" htmlFor="remito-km">
-                        Kilómetros (opcional)
+                        Kilómetros del recorrido
                       </label>
                       <input
                         id="remito-km"
@@ -614,7 +614,9 @@ export default function PedidoAccionesModal({
                     </div>
                   </div>
                   <p className="pedido-formulario__nota mt-2">
-                    El remito incluye el detalle, los kilos, los kilómetros informados y la firma.
+                    El remito incluye el detalle, los kilos, los kilómetros y la firma. Se imprimen
+                    los kilómetros cargados al dar de alta el pedido; si los corregís acá, esa
+                    corrección es la que sale en el PDF.
                   </p>
                 </section>
               )}

@@ -118,6 +118,9 @@ public class PedidoService {
             fechaProgramada,
             fechaCreacion
         );
+        // La distancia se guarda para poder imprimirla en el remito: sin esto el PDF salía
+        // con "Sin informar" aunque el operario la hubiera cargado al tarifar.
+        pedido.setKilometros(request.kilometros());
 
         EvaluacionRetencion evaluacion = new EvaluacionRetencion(
             cliente.getTipoCliente(),

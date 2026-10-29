@@ -47,6 +47,7 @@ CREATE TABLE pedidos (
   id_cliente INT UNSIGNED NOT NULL,
   descripcion TEXT NOT NULL,
   peso_kg DECIMAL(10, 2) NOT NULL,
+  kilometros DECIMAL(8, 2) NULL,
   monto_envio DECIMAL(12, 2) NOT NULL,
   estado ENUM('PENDIENTE', 'EN_REVISION', 'EN_TRANSITO', 'CANCELADO_EN_TRANSITO', 'ENTREGADO', 'FALLIDO') NOT NULL DEFAULT 'PENDIENTE',
   motivo_falla ENUM('Ausente', 'Dirección Inexistente', 'Dirección Incompleta') NULL,
@@ -68,6 +69,7 @@ CREATE TABLE pedidos (
     FOREIGN KEY (id_cliente) REFERENCES clientes (id_cliente)
     ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT chk_pedidos_peso_kg CHECK (peso_kg >= 0),
+  CONSTRAINT chk_pedidos_kilometros CHECK (kilometros IS NULL OR kilometros >= 0),
   CONSTRAINT chk_pedidos_monto_envio CHECK (monto_envio >= 0),
   CONSTRAINT chk_pedidos_latitud CHECK (latitud IS NULL OR latitud BETWEEN -90 AND 90),
   CONSTRAINT chk_pedidos_longitud CHECK (longitud IS NULL OR longitud BETWEEN -180 AND 180),

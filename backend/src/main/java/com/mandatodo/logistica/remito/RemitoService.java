@@ -119,7 +119,7 @@ public class RemitoService {
         DatosRemito datos = DatosRemito.desde(
             pedido,
             operario,
-            request.kilometros(),
+            resolverKilometros(pedido, request),
             subtotal,
             recargo,
             reimpresion,
@@ -151,6 +151,14 @@ public class RemitoService {
             reimpresion,
             motivo
         );
+    }
+
+    /**
+     * El operario puede corregir la distancia al imprimir; si no lo hace se usa la que quedó
+     * guardada cuando se dio de alta el pedido.
+     */
+    private BigDecimal resolverKilometros(Pedido pedido, ImprimirRemitoRequest request) {
+        return request.kilometros() == null ? pedido.getKilometros() : request.kilometros();
     }
 
     private Operario buscarOperario(Long operarioId) {

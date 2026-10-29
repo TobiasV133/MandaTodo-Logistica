@@ -36,6 +36,13 @@ public class Pedido {
     @Column(name = "peso_kg", nullable = false, precision = 10, scale = 2)
     private BigDecimal pesoKg;
 
+    /**
+     * Distancia del recorrido informada al dar de alta el pedido. Se usa para tarifar y se imprime
+     * en el remito. Es opcional porque un pedido con dirección incompleta puede no tenerla.
+     */
+    @Column(name = "kilometros", precision = 8, scale = 2)
+    private BigDecimal kilometros;
+
     @Column(name = "monto_envio", nullable = false, precision = 12, scale = 2)
     private BigDecimal montoEnvio;
 
@@ -120,6 +127,10 @@ public class Pedido {
 
     public BigDecimal getPesoKg() {
         return pesoKg;
+    }
+
+    public BigDecimal getKilometros() {
+        return kilometros;
     }
 
     public BigDecimal getMontoEnvio() {
@@ -208,6 +219,10 @@ public class Pedido {
 
     public void setMontoEnvio(BigDecimal montoEnvio) {
         this.montoEnvio = montoEnvio;
+    }
+
+    public void setKilometros(BigDecimal kilometros) {
+        this.kilometros = kilometros;
     }
 
     public void setFechaProgramada(LocalDate fechaProgramada) {

@@ -33,18 +33,19 @@ INSERT INTO clientes (id_cliente, tipo_documento, numero_documento, nombre_razon
 -- ============================================================
 -- 3. Pedidos
 -- ============================================================
-INSERT INTO pedidos (id_pedido, id_cliente, descripcion, peso_kg, monto_envio, estado, motivo_falla, motivo_cancelacion, calle, altura, piso_depto, localidad, latitud, longitud, fecha_creacion, fecha_programada) VALUES
-  (1, 3, 'Encomienda de documentación', 0.50, 4500.00, 'PENDIENTE', NULL, NULL, 'Av. Corrientes', 1234, '4º B', 'Ciudad Autónoma de Buenos Aires', -34.6037000, -58.3816000, '2026-10-20 09:15:00', '2026-10-20'),
-  (2, 2, 'Reposición de mercadería', 12.50, 18500.00, 'EN_TRANSITO', NULL, NULL, 'Av. Santa Fe', 2450, '2º A', 'Ciudad Autónoma de Buenos Aires', -34.5955000, -58.3932000, '2026-10-19 08:30:00', '2026-10-20'),
+INSERT INTO pedidos (id_pedido, id_cliente, descripcion, peso_kg, kilometros, monto_envio, estado, motivo_falla, motivo_cancelacion, calle, altura, piso_depto, localidad, latitud, longitud, fecha_creacion, fecha_programada) VALUES
+  (1, 3, 'Encomienda de documentación', 0.50, 4.00, 4500.00, 'PENDIENTE', NULL, NULL, 'Av. Corrientes', 1234, '4º B', 'Ciudad Autónoma de Buenos Aires', -34.6037000, -58.3816000, '2026-10-20 09:15:00', '2026-10-20'),
+  (2, 2, 'Reposición de mercadería', 12.50, 11.00, 18500.00, 'EN_TRANSITO', NULL, NULL, 'Av. Santa Fe', 2450, '2º A', 'Ciudad Autónoma de Buenos Aires', -34.5955000, -58.3932000, '2026-10-19 08:30:00', '2026-10-20'),
   -- Pedido #3: monto base 6000.00 + 50% de recargo = 9000.00
-  (3, 4, 'Entrega de medicamentos', 1.20, 9000.00, 'FALLIDO', 'Ausente', NULL, 'Calle 50', 1234, NULL, 'La Plata', -34.9214000, -57.9545000, '2026-10-18 14:10:00', '2026-10-21'),
+  (3, 4, 'Entrega de medicamentos', 1.20, 6.00, 9000.00, 'FALLIDO', 'Ausente', NULL, 'Calle 50', 1234, NULL, 'La Plata', -34.9214000, -57.9545000, '2026-10-18 14:10:00', '2026-10-21'),
   -- Pedido #4: monto base 12000.00 + 50% de recargo = 18000.00
-  (4, 1, 'Devolución de insumos', 8.00, 18000.00, 'FALLIDO', 'Dirección Inexistente', NULL, 'Ruta 8', 45, NULL, 'San Miguel', -34.5411000, -58.7115000, '2026-10-18 11:45:00', '2026-10-22'),
-  (5, 5, 'Paquete de indumentaria', 2.30, 7500.00, 'ENTREGADO', NULL, NULL, 'Av. Mitre', 567, NULL, 'Avellaneda', -34.6625000, -58.3653000, '2026-10-17 10:00:00', '2026-10-18'),
-  (6, 6, 'Documentación comercial', 0.30, 3200.00, 'ENTREGADO', NULL, NULL, 'Av. Belgrano', 890, '6º', 'Ciudad Autónoma de Buenos Aires', -34.6131000, -58.3859000, '2026-10-16 16:20:00', '2026-10-17'),
-  (7, 1, 'Carga paletizada', 25.00, 25000.00, 'EN_REVISION', NULL, NULL, 'S/N', 0, NULL, 'San Miguel', NULL, NULL, '2026-10-20 08:05:00', '2026-10-21'),
-  (8, 2, 'Reposición de mercadería', 12.50, 18500.00, 'EN_REVISION', NULL, NULL, 'Av. Santa Fe', 2450, '2º A', 'Ciudad Autónoma de Buenos Aires', -34.5955000, -58.3932000, '2026-10-19 09:05:00', '2026-10-20'),
-  (9, 6, 'Insumos para evento', 15.00, 22000.00, 'CANCELADO_EN_TRANSITO', NULL, 'El cliente desistió de la entrega antes de la llegada', 'Av. del Libertador', 5678, NULL, 'Vicente López', -34.5250000, -58.4800000, '2026-10-19 13:00:00', '2026-10-20');
+  (4, 1, 'Devolución de insumos', 8.00, 18.00, 18000.00, 'FALLIDO', 'Dirección Inexistente', NULL, 'Ruta 8', 45, NULL, 'San Miguel', -34.5411000, -58.7115000, '2026-10-18 11:45:00', '2026-10-22'),
+  (5, 5, 'Paquete de indumentaria', 2.30, 8.00, 7500.00, 'ENTREGADO', NULL, NULL, 'Av. Mitre', 567, NULL, 'Avellaneda', -34.6625000, -58.3653000, '2026-10-17 10:00:00', '2026-10-18'),
+  (6, 6, 'Documentación comercial', 0.30, 3.00, 3200.00, 'ENTREGADO', NULL, NULL, 'Av. Belgrano', 890, '6º', 'Ciudad Autónoma de Buenos Aires', -34.6131000, -58.3859000, '2026-10-16 16:20:00', '2026-10-17'),
+  -- Pedido #7: dirección incompleta, sin coordenadas ni kilómetros informados
+  (7, 1, 'Carga paletizada', 25.00, NULL, 25000.00, 'EN_REVISION', NULL, NULL, 'S/N', 0, NULL, 'San Miguel', NULL, NULL, '2026-10-20 08:05:00', '2026-10-21'),
+  (8, 2, 'Reposición de mercadería', 12.50, 11.00, 18500.00, 'EN_REVISION', NULL, NULL, 'Av. Santa Fe', 2450, '2º A', 'Ciudad Autónoma de Buenos Aires', -34.5955000, -58.3932000, '2026-10-19 09:05:00', '2026-10-20'),
+  (9, 6, 'Insumos para evento', 15.00, 14.00, 22000.00, 'CANCELADO_EN_TRANSITO', NULL, 'El cliente desistió de la entrega antes de la llegada', 'Av. del Libertador', 5678, NULL, 'Vicente López', -34.5250000, -58.4800000, '2026-10-19 13:00:00', '2026-10-20');
 
 -- ============================================================
 -- 4. Revisiones
