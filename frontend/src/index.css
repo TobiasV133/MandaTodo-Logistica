@@ -2704,13 +2704,6 @@ a {
   padding: 20px;
 }
 
-/* Scroll interno del formulario: evita que el modal desborde el viewport. */
-.modal-form-scroll {
-  max-height: 85vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
 .modal-footer {
   padding: 14px 20px;
   border-top: 1px solid #eef2f7;
@@ -2777,9 +2770,36 @@ a {
   padding: 12px 18px;
   border-top: 1px solid #eef2f7;
 }
-/* Gestión de pedidos: modal de acciones */
-.pedido-modal {
+/* Modales montados en portal: sin scroll interno. El contenido crece libremente
+   y el desplazamiento queda a cargo de la ventana. */
+.portal-modal {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: auto;
+  overflow: visible;
   z-index: 1055;
+}
+
+.portal-modal .modal-dialog {
+  max-height: none;
+  overflow: visible;
+  margin: 1rem auto;
+}
+
+.portal-modal .modal-dialog-centered {
+  display: block;
+  min-height: auto;
+}
+
+.portal-modal .modal-body {
+  max-height: none;
+  overflow: visible;
+}
+
+.portal-modal .modal-content {
+  max-height: none;
+  overflow: visible;
 }
 
 .pedido-modal .modal-content {
