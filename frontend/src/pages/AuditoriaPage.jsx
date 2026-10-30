@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
+import Pagination from '../components/ui/Pagination'
 import { getApiErrorMessage } from '../services/api'
 import { listarAuditoria } from '../services/auditoriaService'
 import { listarOperarios } from '../services/operarioService'
@@ -396,42 +397,13 @@ export default function AuditoriaPage() {
               </table>
             </div>
 
-            <div className="audit-pagination">
-              <span className="text-secondary small">
-                Mostrando {inicio + 1}–{Math.min(inicio + PAGE_SIZE, eventosFiltrados.length)} de{' '}
-                {eventosFiltrados.length}
-              </span>
-
-              <nav aria-label="Paginación de auditoría">
-                <ul className="pagination pagination-sm mb-0">
-                  <li className={`page-item ${paginaActual <= 1 ? 'disabled' : ''}`}>
-                    <button
-                      type="button"
-                      className="page-link"
-                      onClick={() => setPagina(Math.max(1, paginaActual - 1))}
-                      disabled={paginaActual <= 1}
-                    >
-                      Anterior
-                    </button>
-                  </li>
-                  <li className="page-item disabled">
-                    <span className="page-link">
-                      Página {paginaActual} de {totalPaginas}
-                    </span>
-                  </li>
-                  <li className={`page-item ${paginaActual >= totalPaginas ? 'disabled' : ''}`}>
-                    <button
-                      type="button"
-                      className="page-link"
-                      onClick={() => setPagina(Math.min(totalPaginas, paginaActual + 1))}
-                      disabled={paginaActual >= totalPaginas}
-                    >
-                      Siguiente
-                    </button>
-                  </li>
-                </ul>
-              </nav>
-            </div>
+            <Pagination
+              page={paginaActual}
+              totalItems={eventosFiltrados.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPagina}
+              ariaLabel="Paginación de auditoría"
+            />
           </>
         )}
       </div>

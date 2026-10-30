@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import OperarioFormModal from '../components/operarios/OperarioFormModal'
 import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
+import Pagination from '../components/ui/Pagination'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
 import {
@@ -21,6 +22,8 @@ function rolBadge(rol) {
     : 'bg-info text-dark'
 }
 
+const PAGE_SIZE = 10
+
 export default function OperariosPage() {
   const { operario: operarioActual } = useAuth()
   const [operarios, setOperarios] = useState([])
@@ -32,6 +35,7 @@ export default function OperariosPage() {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [operarioEditando, setOperarioEditando] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
+  const [pagina, setPagina] = useState(1)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -72,6 +76,11 @@ export default function OperariosPage() {
       return texto.includes(termino)
     })
   }, [operarios, busqueda])
+
+  const totalPaginas = Math.max(1, Math.ceil(operariosFiltrados.length / PAGE_SIZE))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const inicio = (paginaActual - 1) * PAGE_SIZE
+  const operariosPagina = operariosFiltrados.slice(inicio, inicio + PAGE_SIZE)
 
   const abrirNuevo = () => {
     setOperarioEditando(null)
@@ -194,7 +203,10 @@ export default function OperariosPage() {
               className="form-control"
               placeholder="Buscar por usuario, nombre, email o rol"
               value={busqueda}
-              onChange={(event) => setBusqueda(event.target.value)}
+              onChange={(event) => {
+                setBusqueda(event.target.value)
+                setPagina(1)
+              }}
               aria-label="Buscar operarios"
             />
           </div>
@@ -224,7 +236,10 @@ export default function OperariosPage() {
                 <button
                   type="button"
                   className="btn btn-outline-secondary"
-                  onClick={() => setBusqueda('')}
+                  onClick={() => {
+                    setBusqueda('')
+                    setPagina(1)
+                  }}
                 >
                   Limpiar búsqueda
                 </button>
@@ -232,8 +247,9 @@ export default function OperariosPage() {
             }
           />
         ) : (
-          <div className="table-responsive">
-            <table className="table table-mt align-middle">
+          <>
+            <div className="table-responsive">
+              <table className="table table-mt align-middle">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -246,7 +262,7 @@ export default function OperariosPage() {
                 </tr>
               </thead>
               <tbody>
-                {operariosFiltrados.map((operario) => {
+                {operariosPagina.map((operario) => {
                   const esMiUsuario = operario.idOperario === operarioActual?.idOperario
                   const estaActivo = operario.estado === 'Activo'
                   const cambiando = togglingId === operario.idOperario
@@ -335,8 +351,16 @@ export default function OperariosPage() {
                   )
                 })}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+            <Pagination
+              page={paginaActual}
+              totalItems={operariosFiltrados.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPagina}
+              ariaLabel="Paginación de operarios"
+            />
+          </>
         )}
       </div>
 

@@ -5,6 +5,7 @@ import PedidoAccionesModal from '../components/pedidos/PedidoAccionesModal'
 import EmptyState from '../components/ui/EmptyState'
 import EstadoBadge from '../components/ui/EstadoBadge'
 import Icon from '../components/ui/Icon'
+import Pagination from '../components/ui/Pagination'
 import { ESTADOS_LISTA } from '../constants/estados'
 import { getApiErrorMessage } from '../services/api'
 import { listarPedidos } from '../services/pedidoService'
@@ -12,6 +13,7 @@ import { formatFechaHora, formatMoneda, formatPeso } from '../utils/formatters'
 
 const FILTROS = [{ value: 'TODOS', label: 'Todos' }, ...ESTADOS_LISTA]
 const VALORES_FILTRO = new Set(FILTROS.map((item) => item.value))
+const PAGE_SIZE = 10
 
 function normalizarFiltro(valor) {
   const estado = typeof valor === 'string' ? valor.trim().toUpperCase() : ''
@@ -28,10 +30,12 @@ export default function PedidosView({ soloRevision = false }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
+  const [pagina, setPagina] = useState(1)
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFiltro((prev) => (prev === filtroUrl ? prev : filtroUrl))
+    setPagina(1)
   }, [filtroUrl])
 
   const estadoConsulta = soloRevision ? 'EN_REVISION' : filtro
@@ -42,6 +46,7 @@ export default function PedidosView({ soloRevision = false }) {
       const siguientes = new URLSearchParams(searchParams)
 
       setFiltro(filtroNormalizado)
+      setPagina(1)
 
       if (filtroNormalizado === 'TODOS') {
         siguientes.delete('estado')
@@ -90,6 +95,11 @@ export default function PedidosView({ soloRevision = false }) {
       return texto.includes(termino)
     })
   }, [pedidos, busqueda])
+
+  const totalPaginas = Math.max(1, Math.ceil(pedidosFiltrados.length / PAGE_SIZE))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const inicio = (paginaActual - 1) * PAGE_SIZE
+  const pedidosPagina = pedidosFiltrados.slice(inicio, inicio + PAGE_SIZE)
 
   return (
     <div className="page-stack page-stack--fill">
@@ -153,7 +163,10 @@ export default function PedidosView({ soloRevision = false }) {
               className="form-control"
               placeholder="Buscar por código, cliente o dirección"
               value={busqueda}
-              onChange={(event) => setBusqueda(event.target.value)}
+              onChange={(event) => {
+                setBusqueda(event.target.value)
+                setPagina(1)
+              }}
               aria-label="Buscar pedidos"
             />
           </div>
@@ -191,8 +204,9 @@ export default function PedidosView({ soloRevision = false }) {
             }
           />
         ) : (
-          <div className="table-responsive">
-            <table className="table table-mt align-middle">
+          <>
+            <div className="table-responsive">
+              <table className="table table-mt align-middle">
               <thead>
                 <tr>
                   <th>Código</th>
@@ -206,7 +220,7 @@ export default function PedidosView({ soloRevision = false }) {
                 </tr>
               </thead>
               <tbody>
-                {pedidosFiltrados.map((pedido) => (
+                {pedidosPagina.map((pedido) => (
                   <tr key={pedido.idPedido}>
                     <td>
                       <span className="code-cell">{pedido.codigoPedido}</span>
@@ -267,8 +281,16 @@ export default function PedidosView({ soloRevision = false }) {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+            <Pagination
+              page={paginaActual}
+              totalItems={pedidosFiltrados.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPagina}
+              ariaLabel="Paginación de pedidos"
+            />
+          </>
         )}
       </div>
 

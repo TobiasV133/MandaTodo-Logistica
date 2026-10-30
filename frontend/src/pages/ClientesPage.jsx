@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import ClienteFormModal from '../components/clientes/ClienteFormModal'
 import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
+import Pagination from '../components/ui/Pagination'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
 import { listarClientes } from '../services/clienteService'
@@ -13,6 +14,8 @@ function badgeTipoCliente(tipoCliente) {
   return tipoCliente === 'Empresa' ? 'bg-primary' : 'bg-success'
 }
 
+const PAGE_SIZE = 10
+
 export default function ClientesPage() {
   const { operario } = useAuth()
   const [clientes, setClientes] = useState([])
@@ -22,6 +25,7 @@ export default function ClientesPage() {
   const [mensaje, setMensaje] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [clienteEditando, setClienteEditando] = useState(null)
+  const [pagina, setPagina] = useState(1)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -62,6 +66,11 @@ export default function ClientesPage() {
       return texto.includes(termino)
     })
   }, [clientes, busqueda])
+
+  const totalPaginas = Math.max(1, Math.ceil(clientesFiltrados.length / PAGE_SIZE))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const inicio = (paginaActual - 1) * PAGE_SIZE
+  const clientesPagina = clientesFiltrados.slice(inicio, inicio + PAGE_SIZE)
 
   const abrirNuevo = () => {
     setClienteEditando(null)
@@ -148,7 +157,10 @@ export default function ClientesPage() {
               className="form-control"
               placeholder="Buscar por nombre, DNI/CUIT o email"
               value={busqueda}
-              onChange={(event) => setBusqueda(event.target.value)}
+              onChange={(event) => {
+                setBusqueda(event.target.value)
+                setPagina(1)
+              }}
               aria-label="Buscar clientes"
             />
           </div>
@@ -178,7 +190,10 @@ export default function ClientesPage() {
                 <button
                   type="button"
                   className="btn btn-outline-secondary"
-                  onClick={() => setBusqueda('')}
+                  onClick={() => {
+                    setBusqueda('')
+                    setPagina(1)
+                  }}
                 >
                   Limpiar búsqueda
                 </button>
@@ -186,8 +201,9 @@ export default function ClientesPage() {
             }
           />
         ) : (
-          <div className="table-responsive">
-            <table className="table table-mt align-middle">
+          <>
+            <div className="table-responsive">
+              <table className="table table-mt align-middle">
               <thead>
                 <tr>
                   <th>Cliente</th>
@@ -200,7 +216,7 @@ export default function ClientesPage() {
                 </tr>
               </thead>
               <tbody>
-                {clientesFiltrados.map((cliente) => (
+                {clientesPagina.map((cliente) => (
                   <tr key={cliente.idCliente}>
                     <td>
                       <div className="client-cell">
@@ -257,8 +273,16 @@ export default function ClientesPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+            <Pagination
+              page={paginaActual}
+              totalItems={clientesFiltrados.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPagina}
+              ariaLabel="Paginación de clientes"
+            />
+          </>
         )}
       </div>
 
