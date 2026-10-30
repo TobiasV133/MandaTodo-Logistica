@@ -157,7 +157,6 @@ export default function OperarioFormModal({ operario, onClose, onSaved }) {
     <Modal
       open
       title={editando ? 'Editar operario' : 'Nuevo operario'}
-      size="modal-dialog-scrollable"
       onClose={cerrar}
       footer={
         <>

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { getApiErrorMessage } from '../../services/api'
 import {
@@ -28,6 +29,7 @@ export default function PedidoAccionesModal({
   onUpdated,
 }) {
   const descargaRef = useRef(null)
+  const [scrollInicial] = useState(() => window.scrollY)
   const [formulario, setFormulario] = useState(null)
   const [motivoFalla, setMotivoFalla] = useState(MOTIVOS_FALLA[0])
   const [notaFalla, setNotaFalla] = useState('')
@@ -144,10 +146,11 @@ export default function PedidoAccionesModal({
     }
   }
 
-  return (
+  return createPortal(
     <>
       <div
-        className="modal fade show d-block pedido-modal"
+        className="modal fade show d-block portal-modal pedido-modal"
+        style={{ top: scrollInicial }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="pedido-modal-titulo"
@@ -639,6 +642,7 @@ export default function PedidoAccionesModal({
         </div>
       </div>
       <div className="modal-backdrop fade show" />
-    </>
+    </>,
+    document.body,
   )
 }
