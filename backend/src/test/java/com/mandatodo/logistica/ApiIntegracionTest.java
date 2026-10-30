@@ -170,6 +170,46 @@ class ApiIntegracionTest {
     }
 
     @Test
+    void guardaLosKilometrosDelAltaYLosImprimeEnElRemito() throws Exception {
+        String creado = mvc.perform(post("/api/pedidos")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "operarioId": %d,
+                      "clienteId": %d,
+                      "descripcion": "Carga con distancia informada",
+                      "pesoKg": 21.00,
+                      "kilometros": 16.00,
+                      "calle": "Av. Corrientes",
+                      "altura": 1234,
+                      "localidad": "Ciudad Autónoma de Buenos Aires"
+                    }
+                    """.formatted(operario.getId(), pedido.getCliente().getId())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.pedido.kilometros").value(16.00))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        long idNuevo = json.readTree(creado).path("pedido").path("idPedido").asLong();
+
+        // Sin kilometros en el request: el remito debe usar los guardados en el alta.
+        MvcResult remito = mvc.perform(post("/api/remitos/{id}/imprimir", idNuevo)
+                .accept(MediaType.APPLICATION_PDF, MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "operarioId": %d }
+                    """.formatted(operario.getId())))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+            .andReturn();
+
+        assertThat(extraerTexto(remito.getResponse().getContentAsByteArray()))
+            .contains("16,00 km")
+            .doesNotContain("Sin informar");
+    }
+
+    @Test
     void registraEnLaAuditoriaLaCorreccionManualDelPin() throws Exception {
         mvc.perform(post("/api/pedidos")
                 .contentType(MediaType.APPLICATION_JSON)

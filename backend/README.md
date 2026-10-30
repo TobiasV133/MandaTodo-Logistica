@@ -291,9 +291,13 @@ Estados que no admiten remito:
 
 ### Kilómetros
 
-`schema.sql` no guarda los kilómetros del pedido. El endpoint acepta `kilometros` de forma opcional:
-si se informa, se imprime en el detalle y en los totales; si no, el documento muestra
-`Sin informar`. El valor no se persiste.
+`pedidos.kilometros` guarda la distancia informada al dar de alta el pedido, porque sin ella el
+remito salía con `Sin informar` aunque el operario la hubiera cargado para tarifar. La columna es
+`NULL` para los pedidos con dirección incompleta, donde no hay recorrido calculado.
+
+El endpoint acepta `kilometros` de forma opcional para corregirla en el documento: si se informa,
+ese valor manda; si se omite, se imprime el guardado en el pedido; y si tampoco existe, el
+documento muestra `Sin informar`.
 
 ### Ejemplo
 

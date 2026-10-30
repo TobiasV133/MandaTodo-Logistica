@@ -85,7 +85,7 @@ public class PedidoResponseFactory {
             pedido.getMontoEnvio(),
             null,
             null,
-            null,
+            pedido.getKilometros(),
             pedido.getFechaProgramada(),
             null
         );

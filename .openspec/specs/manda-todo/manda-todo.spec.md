@@ -73,6 +73,7 @@ export interface Pedido {
   id_cliente: number;
   descripcion: string;
   peso_kg: number;
+  kilometros?: number; // distancia del recorrido: tarifa y remito
   monto_envio: number;
   estado: EstadoPedido;
   motivo_falla?: MotivoFalla;

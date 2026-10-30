@@ -188,10 +188,6 @@ public class Pedido {
         return kilometros;
     }
 
-    public void setKilometros(BigDecimal kilometros) {
-        this.kilometros = kilometros;
-    }
-
     public BigDecimal getPrecioBase() {
         return precioBase;
     }
@@ -298,6 +294,10 @@ public class Pedido {
 
     public void setMontoEnvio(BigDecimal montoEnvio) {
         this.montoEnvio = montoEnvio;
+    }
+
+    public void setKilometros(BigDecimal kilometros) {
+        this.kilometros = kilometros;
     }
 
     public void setFechaProgramada(LocalDate fechaProgramada) {

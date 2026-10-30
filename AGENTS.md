@@ -21,6 +21,7 @@
 - `schema.sql` is the canonical MySQL 8 DDL for `mandatodo_db` (5 tables: `clientes`, `operarios`, `pedidos`, `revisiones`, `auditoria`). It drops and recreates those tables, so running it is destructive.
 - `seeds.sql` loads deterministic test data after `schema.sql` (3 operarios, 6 clientes, 9 pedidos, 2 revisiones, 17 eventos de auditoría). It uses fixed IDs and test credentials, and is not idempotent: run it only against freshly created tables.
 - Schema includes implementation-required columns not present in the TS model: `operarios.password_hash` (login), `pedidos.fecha_programada` (failed-delivery retry), and `pedidos.motivo_cancelacion` (in-transit cancellation). Triggers make `auditoria` append-only.
+- `pedidos.kilometros` (DECIMAL(8,2) NULL) stores the distance entered when creating an order. It feeds the tariff, the `PedidoResponse.kilometros` field, and the remito PDF; without it the PDF printed `Sin informar`. The remito endpoint can still override it per print.
 - Apply with a MySQL 8 client: `mysql -u <user> -p < schema.sql`. No `mysql` CLI is installed in this environment (verified); the Docker daemon is also not running, so the DDL has not been executed against MySQL 8.
 
 ## Project context

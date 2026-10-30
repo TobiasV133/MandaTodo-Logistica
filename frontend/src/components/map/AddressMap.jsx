@@ -38,21 +38,31 @@ function MapClickHandler({ activo, onElegir }) {
 /**
  * Mapa reutilizable de OpenStreetMap / React-Leaflet.
  *
+ * Acepta dos APIs de props equivalentes para no romper a las vistas que
+ * todavía usan la firma anterior:
+ *  - `ajustable` / `ajustado` / `onAjustar(latitud, longitud)`
+ *  - `esEditable` / `readOnly` / `onChangeLocation({ latitud, longitud })`
+ *    u `onPositionChange`.
+ *
  * @param {object} props
- * @param {number|string|null|undefined} props.latitud - Latitud inicial o controlada.
- * @param {number|string|null|undefined} props.longitud - Longitud inicial o controlada.
- * @param {string} [props.direccion] - Texto mostrado en el popup del marcador.
- * @param {boolean} [props.esEditable=true] - Si es true, el marcador se puede arrastrar.
- * @param {boolean} [props.readOnly=false] - Alias inverso de `esEditable`; si es true, fuerza el modo lectura.
+ * @param {number|string|null|undefined} props.latitud
+ * @param {number|string|null|undefined} props.longitud
+ * @param {string} [props.direccion]
+ * @param {boolean} [props.ajustable=false]
+ * @param {boolean} [props.ajustado=false]
+ * @param {(latitud: number, longitud: number) => void} [props.onAjustar]
+ * @param {boolean} [props.esEditable=true]
+ * @param {boolean} [props.readOnly=false]
  * @param {(coordenadas: { latitud: number, longitud: number }) => void} [props.onChangeLocation]
- *   Callback invocado al soltar el marcador (`dragend`).
  * @param {(coordenadas: { latitud: number, longitud: number }) => void} [props.onPositionChange]
- *   Alias de `onChangeLocation` para mantener compatibilidad entre vistas.
  */
 export default function AddressMap({
   latitud,
   longitud,
   direccion,
+  ajustable = false,
+  ajustado = false,
+  onAjustar,
   esEditable = true,
   readOnly = false,
   onChangeLocation,
@@ -60,26 +70,33 @@ export default function AddressMap({
 }) {
   const editable = esEditable && !readOnly
   const notificarCambio = onChangeLocation ?? onPositionChange
-  const [ajustado, setAjustado] = useState(false)
+  const [ajustadoLocal, setAjustadoLocal] = useState(false)
+  const pinAjustado = ajustado || ajustadoLocal
+  const puedeAjustar = ajustable || editable
 
-  const handleDragEnd = useCallback(
-    (event) => {
-      if (!editable || typeof notificarCambio !== 'function') return
+  const notificarAjuste = useCallback(
+    (nuevaLatitud, nuevaLongitud) => {
+      setAjustadoLocal(true)
 
-      const { lat, lng } = event.target.getLatLng()
-      setAjustado(true)
-      notificarCambio({ latitud: lat, longitud: lng })
+      if (typeof onAjustar === 'function') {
+        onAjustar(nuevaLatitud, nuevaLongitud)
+        return
+      }
+      if (typeof notificarCambio === 'function') {
+        notificarCambio({ latitud: nuevaLatitud, longitud: nuevaLongitud })
+      }
     },
-    [editable, notificarCambio],
+    [onAjustar, notificarCambio],
   )
 
-  const moverPin = useCallback(
-    (lat, lng) => {
-      if (!editable || typeof notificarCambio !== 'function') return
-      setAjustado(true)
-      notificarCambio({ latitud: lat, longitud: lng })
+  const handleDragEnd = useCallback(
+    (evento) => {
+      if (!editable) return
+
+      const { lat, lng } = evento.target.getLatLng()
+      notificarAjuste(lat, lng)
     },
-    [editable, notificarCambio],
+    [editable, notificarAjuste],
   )
 
   const tieneCoordenadas =
@@ -115,16 +132,23 @@ export default function AddressMap({
         <MapFocus
           latitud={tieneCoordenadas ? Number(latitud) : null}
           longitud={tieneCoordenadas ? Number(longitud) : null}
-          seguir={!ajustado}
+          seguir={!pinAjustado}
         />
-        <MapClickHandler activo={editable && tieneCoordenadas} onElegir={moverPin} />
+        <MapClickHandler
+          activo={puedeAjustar && tieneCoordenadas}
+          onElegir={notificarAjuste}
+        />
         {tieneCoordenadas && (
           <Marker
             position={posicion}
             draggable={editable}
             eventHandlers={eventHandlers}
           >
-            <Popup>{direccion || 'Ubicación validada'}</Popup>
+            <Popup>
+              {pinAjustado
+                ? 'Ubicación corregida manualmente'
+                : direccion || 'Ubicación validada'}
+            </Popup>
           </Marker>
         )}
       </MapContainer>
@@ -136,10 +160,12 @@ export default function AddressMap({
         </div>
       )}
 
-      {editable && tieneCoordenadas && (
+      {puedeAjustar && tieneCoordenadas && (
         <div className="map-adjust-note">
           <Icon name="mapPin" size={15} />
-          Arrastrá el pin o hacé clic en el mapa para ajustar la ubicación exacta.
+          {editable
+            ? 'Arrastrá el pin o hacé clic en el mapa para ajustar la ubicación exacta.'
+            : 'Hacé clic en el mapa para ajustar la ubicación exacta.'}
         </div>
       )}
     </div>

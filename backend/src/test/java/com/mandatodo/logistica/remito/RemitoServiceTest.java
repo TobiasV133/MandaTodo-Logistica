@@ -154,6 +154,36 @@ class RemitoServiceTest {
     }
 
     @Test
+    void imprimeLosKilometrosGuardadosEnElPedidoCuandoNoSeInformanAlImprimir() {
+        prepararPedidoYOperario();
+        pedido.setKilometros(new BigDecimal("12.50"));
+        when(auditoriaRepository.countByPedido_IdAndActividadStartingWith(42L, "Remito "))
+            .thenReturn(0L);
+        permitirGeneracion();
+
+        servicio.imprimir(42L, request(null, null));
+
+        ArgumentCaptor<DatosRemito> captor = ArgumentCaptor.forClass(DatosRemito.class);
+        verify(generador).generar(captor.capture());
+        assertThat(captor.getValue().kilometros()).isEqualByComparingTo("12.50");
+    }
+
+    @Test
+    void losKilometrosInformadosAlImprimirPisanLosDelPedido() {
+        prepararPedidoYOperario();
+        pedido.setKilometros(new BigDecimal("12.50"));
+        when(auditoriaRepository.countByPedido_IdAndActividadStartingWith(42L, "Remito "))
+            .thenReturn(0L);
+        permitirGeneracion();
+
+        servicio.imprimir(42L, request(null, "45.00"));
+
+        ArgumentCaptor<DatosRemito> captor = ArgumentCaptor.forClass(DatosRemito.class);
+        verify(generador).generar(captor.capture());
+        assertThat(captor.getValue().kilometros()).isEqualByComparingTo("45.00");
+    }
+
+    @Test
     void separaElSubtotalYElRecargoDeUnaEntregaFallida() {
         prepararPedidoYOperario();
         pedido.setMontoEnvio(new BigDecimal("9000.00"));
@@ -209,7 +239,7 @@ class RemitoServiceTest {
         ArgumentCaptor<DatosRemito> captor = ArgumentCaptor.forClass(DatosRemito.class);
         verify(generador).generar(captor.capture());
         assertThat(captor.getValue().motivoReimpresion()).isNull();
-        assertThat(captor.getValue().kilometros()).isNull();
+        assertThat(captor.getValue().kilometros()).isEqualByComparingTo("10.00");
     }
 
     @Test

@@ -2,11 +2,15 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "jdk",
+      "type": "java",
       "name": "Backend: Spring Boot",
       "request": "launch",
       "mainClass": "com.mandatodo.logistica.MandaTodoApplication",
       "cwd": "${workspaceFolder}/backend",
+      // Se evita el modo "integratedTerminal": el debug adapter espera leer
+      // "Listening for transport dt_socket" de la terminal y, si no llega a tiempo,
+      // falla con com.sun.jdi.connect.TransportTimeoutException.
+      "console": "internalConsole",
       "env": {
         "DB_USERNAME": "root",
         "DB_PASSWORD": "${input:dbPassword}"
