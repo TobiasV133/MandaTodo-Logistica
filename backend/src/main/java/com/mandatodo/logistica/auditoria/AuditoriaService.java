@@ -1,10 +1,13 @@
 package com.mandatodo.logistica.auditoria;
 
+import com.mandatodo.logistica.auditoria.dto.AuditoriaDTO;
 import com.mandatodo.logistica.operario.Operario;
 import com.mandatodo.logistica.pedido.Pedido;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuditoriaService {
@@ -25,5 +28,13 @@ public class AuditoriaService {
             tipoEvento,
             LocalDateTime.now(clock)
         ));
+    }
+
+    @Transactional(readOnly = true)
+    public List<AuditoriaDTO> listar() {
+        return auditoriaRepository.findAllByOrderByFechaHoraDesc()
+            .stream()
+            .map(AuditoriaDTO::desde)
+            .toList();
     }
 }

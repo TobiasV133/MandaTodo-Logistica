@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
-    private static final String CREDENCIALES_INVALIDAS = "Email o contraseña incorrectos.";
+    private static final String CREDENCIALES_INVALIDAS = "Usuario o contraseña incorrectos.";
 
     private final OperarioRepository operarioRepository;
     private final PasswordService passwordService;
@@ -34,9 +34,16 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        String email = request.username().trim();
-        Operario operario = operarioRepository.findByEmailIgnoreCase(email)
-            .orElseThrow(() -> new ErrorHttpException(HttpStatus.UNAUTHORIZED, CREDENCIALES_INVALIDAS));
+        String username = request.username() == null
+            ? ""
+            : request.username().trim().toLowerCase();
+
+        Operario operario = operarioRepository.findByUsernameIgnoreCase(username)
+            .or(() -> operarioRepository.findByEmailIgnoreCase(username))
+            .orElseThrow(() -> new ErrorHttpException(
+                HttpStatus.UNAUTHORIZED,
+                CREDENCIALES_INVALIDAS
+            ));
 
         if (operario.getEstado() != EstadoOperario.Activo
             || !passwordService.matches(request.password(), operario.getPasswordHash())) {

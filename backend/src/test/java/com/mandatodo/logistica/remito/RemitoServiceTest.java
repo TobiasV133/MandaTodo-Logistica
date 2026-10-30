@@ -96,6 +96,10 @@ class RemitoServiceTest {
             cliente,
             "Caja de electrónica",
             new BigDecimal("10.00"),
+            new BigDecimal("10.00"),
+            new BigDecimal("18500.00"),
+            new BigDecimal("18500.00"),
+            BigDecimal.ZERO,
             new BigDecimal("18500.00"),
             "Av. Corrientes",
             1234,
@@ -235,7 +239,7 @@ class RemitoServiceTest {
         ArgumentCaptor<DatosRemito> captor = ArgumentCaptor.forClass(DatosRemito.class);
         verify(generador).generar(captor.capture());
         assertThat(captor.getValue().motivoReimpresion()).isNull();
-        assertThat(captor.getValue().kilometros()).isNull();
+        assertThat(captor.getValue().kilometros()).isEqualByComparingTo("10.00");
     }
 
     @Test

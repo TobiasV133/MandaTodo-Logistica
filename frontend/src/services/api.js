@@ -16,6 +16,9 @@ api.interceptors.request.use((config) => {
   if (session?.token) {
     config.headers.Authorization = `Bearer ${session.token}`
   }
+  if (session?.operario?.idOperario) {
+    config.headers['X-Operario-Id'] = String(session.operario.idOperario)
+  }
   return config
 })
 

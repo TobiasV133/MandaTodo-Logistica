@@ -64,6 +64,7 @@ public record CrearPedidoRequest(
     @Size(max = 5000, message = "no puede superar los 5000 caracteres")
     String descripcionPaquete,
 
+    @NotNull(message = "Los kilómetros son obligatorios para calcular el envío")
     @DecimalMin(value = "0.00", message = "no puede ser negativo")
     BigDecimal kilometros,
 

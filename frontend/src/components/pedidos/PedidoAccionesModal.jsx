@@ -152,7 +152,7 @@ export default function PedidoAccionesModal({
         aria-modal="true"
         aria-labelledby="pedido-modal-titulo"
       >
-        <div className="modal-dialog modal-lg modal-dialog-scrollable">
+        <div className="modal-dialog modal-lg modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">
               <div>

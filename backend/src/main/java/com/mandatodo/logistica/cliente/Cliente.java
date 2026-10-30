@@ -7,7 +7,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "clientes")
@@ -40,6 +42,9 @@ public class Cliente {
     @Column(name = "es_frecuente", nullable = false)
     private boolean esFrecuente;
 
+    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
+
     protected Cliente() {
     }
 
@@ -61,6 +66,13 @@ public class Cliente {
         this.esFrecuente = esFrecuente;
     }
 
+    @PrePersist
+    void prePersist() {
+        if (fechaCreacion == null) {
+            fechaCreacion = LocalDateTime.now();
+        }
+    }
+
     public Long getId() {
         return id;
     }
@@ -69,27 +81,63 @@ public class Cliente {
         return tipoDocumento;
     }
 
+    public void setTipoDocumento(String tipoDocumento) {
+        this.tipoDocumento = tipoDocumento;
+    }
+
     public String getNumeroDocumento() {
         return numeroDocumento;
+    }
+
+    public void setNumeroDocumento(String numeroDocumento) {
+        this.numeroDocumento = numeroDocumento;
     }
 
     public String getNombreRazonSocial() {
         return nombreRazonSocial;
     }
 
+    public void setNombreRazonSocial(String nombreRazonSocial) {
+        this.nombreRazonSocial = nombreRazonSocial;
+    }
+
     public String getTelefono() {
         return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
     }
 
     public String getEmail() {
         return email;
     }
 
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public TipoCliente getTipoCliente() {
         return tipoCliente;
     }
 
+    public void setTipoCliente(TipoCliente tipoCliente) {
+        this.tipoCliente = tipoCliente;
+    }
+
     public boolean isEsFrecuente() {
         return esFrecuente;
+    }
+
+    public Boolean getEsFrecuente() {
+        return esFrecuente;
+    }
+
+    public void setEsFrecuente(boolean esFrecuente) {
+        this.esFrecuente = esFrecuente;
+    }
+
+    public LocalDateTime getFechaCreacion() {
+        return fechaCreacion;
     }
 }

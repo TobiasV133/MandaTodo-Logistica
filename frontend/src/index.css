@@ -847,6 +847,12 @@ a {
   animation: fade-up 0.28s ease both;
 }
 
+/* Mantiene altura suficiente para que los modales fixed se centren
+   correctamente aunque la tabla tenga pocos registros. */
+.page-stack--fill {
+  min-height: calc(100vh - 120px);
+}
+
 .page-heading {
   display: flex;
   align-items: flex-start;
@@ -2675,6 +2681,102 @@ a {
   }
 }
 
+/* ------------------------------------------------------------ Modals & ABM */
+
+.modal-content {
+  overflow: hidden;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.modal-title {
+  color: #1f2c42;
+  font-weight: 800;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+/* Scroll interno del formulario: evita que el modal desborde el viewport. */
+.modal-form-scroll {
+  max-height: 85vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid #eef2f7;
+}
+
+.form-select {
+  min-height: 39px;
+  border-color: #dbe3ef;
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+
+.form-select:focus {
+  border-color: #93b4f8;
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.12);
+}
+
+.actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ------------------------------------------------------------ Audit */
+
+.audit-operator {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.audit-operator strong {
+  color: #2b3a52;
+  font-size: 0.79rem;
+  font-weight: 700;
+}
+
+.audit-operator small {
+  color: #929db0;
+  font-size: 0.67rem;
+}
+
+.audit-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.audit-detail {
+  display: block;
+  max-width: 520px;
+  color: #42526b;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.audit-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-top: 1px solid #eef2f7;
+}
 /* Gestión de pedidos: modal de acciones */
 .pedido-modal {
   z-index: 1055;
@@ -2694,6 +2796,8 @@ a {
 .pedido-modal .modal-footer {
   border-top: 1px solid var(--mt-border);
 }
+
+
 
 .pedido-modal__estado {
   display: flex;

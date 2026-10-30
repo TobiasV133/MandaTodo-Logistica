@@ -190,6 +190,31 @@ const ICONS = {
       <path d="M16 14h.01" />
     </>
   ),
+  edit: (
+    <>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </>
+  ),
+  filter: (
+    <>
+      <path d="M4 5h16" />
+      <path d="M7 12h10" />
+      <path d="M10 19h4" />
+    </>
+  ),
+  toggleLeft: (
+    <>
+      <rect x="2" y="6" width="20" height="12" rx="6" />
+      <circle cx="8" cy="12" r="3" />
+    </>
+  ),
+  toggleRight: (
+    <>
+      <rect x="2" y="6" width="20" height="12" rx="6" />
+      <circle cx="16" cy="12" r="3" />
+    </>
+  ),
   star: (
     <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z" />
   ),

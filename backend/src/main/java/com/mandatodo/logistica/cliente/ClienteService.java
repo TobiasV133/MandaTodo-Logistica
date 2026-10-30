@@ -1,11 +1,20 @@
 package com.mandatodo.logistica.cliente;
 
+import com.mandatodo.logistica.auditoria.AuditoriaService;
+import com.mandatodo.logistica.auditoria.TipoEvento;
+import com.mandatodo.logistica.cliente.dto.ActualizarClienteDTO;
+import com.mandatodo.logistica.cliente.dto.ClienteDTO;
 import com.mandatodo.logistica.cliente.dto.ClienteRequest;
 import com.mandatodo.logistica.cliente.dto.ClienteResponse;
+import com.mandatodo.logistica.cliente.dto.CrearClienteDTO;
+import com.mandatodo.logistica.operario.Operario;
+import com.mandatodo.logistica.operario.OperarioRepository;
+import com.mandatodo.logistica.shared.error.ErrorHttpException;
 import com.mandatodo.logistica.shared.error.RecursoNoEncontradoException;
 import com.mandatodo.logistica.shared.error.ReglaNegocioException;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -14,9 +23,17 @@ import org.springframework.util.StringUtils;
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
+    private final AuditoriaService auditoriaService;
+    private final OperarioRepository operarioRepository;
 
-    public ClienteService(ClienteRepository clienteRepository) {
+    public ClienteService(
+        ClienteRepository clienteRepository,
+        AuditoriaService auditoriaService,
+        OperarioRepository operarioRepository
+    ) {
         this.clienteRepository = clienteRepository;
+        this.auditoriaService = auditoriaService;
+        this.operarioRepository = operarioRepository;
     }
 
     @Transactional(readOnly = true)
@@ -30,6 +47,16 @@ public class ClienteService {
     @Transactional(readOnly = true)
     public ClienteResponse buscarPorDocumento(String documento) {
         return ClienteResponse.desde(buscarEntidadPorDocumento(documento));
+    }
+
+    @Transactional(readOnly = true)
+    public ClienteDTO buscarPorId(Long idCliente) {
+        return ClienteDTO.desde(
+            clienteRepository.findById(idCliente)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                    "Cliente no encontrado: " + idCliente
+                ))
+        );
     }
 
     @Transactional
@@ -49,6 +76,72 @@ public class ClienteService {
                 request.tipoCliente(),
                 Boolean.TRUE.equals(request.esFrecuente())
             )));
+    }
+
+    @Transactional
+    public ClienteDTO crear(CrearClienteDTO dto, Long idOperario) {
+        String documento = normalizarDocumento(dto.numeroDocumento());
+        if (documento.isBlank()) {
+            throw new ReglaNegocioException("El número de documento no puede estar vacío.");
+        }
+
+        String email = dto.email().trim().toLowerCase(Locale.ROOT);
+
+        if (clienteRepository.existsByNumeroDocumento(documento)) {
+            throw new ReglaNegocioException(
+                "Ya existe un cliente con el documento " + documento + "."
+            );
+        }
+        if (clienteRepository.existsByEmail(email)) {
+            throw new ReglaNegocioException(
+                "Ya existe un cliente con el email " + email + "."
+            );
+        }
+
+        Cliente cliente = new Cliente(
+            normalizarTipoDocumento(dto.tipoDocumento()),
+            documento,
+            dto.nombreRazonSocial().trim(),
+            dto.telefono().trim(),
+            email,
+            dto.tipoCliente(),
+            Boolean.TRUE.equals(dto.esFrecuente())
+        );
+
+        Cliente guardado = clienteRepository.save(cliente);
+        registrarAuditoria(idOperario, "Alta de cliente: " + documento, TipoEvento.ALTA);
+        return ClienteDTO.desde(guardado);
+    }
+
+    @Transactional
+    public ClienteDTO actualizar(Long idCliente, ActualizarClienteDTO dto, Long idOperario) {
+        Cliente cliente = clienteRepository.findById(idCliente)
+            .orElseThrow(() -> new RecursoNoEncontradoException(
+                "Cliente no encontrado: " + idCliente
+            ));
+
+        String email = dto.email().trim().toLowerCase(Locale.ROOT);
+
+        if (!cliente.getEmail().equalsIgnoreCase(email)
+            && clienteRepository.existsByEmailAndIdNot(email, idCliente)) {
+            throw new ReglaNegocioException(
+                "El email " + email + " ya está asociado a otro cliente."
+            );
+        }
+
+        cliente.setNombreRazonSocial(dto.nombreRazonSocial().trim());
+        cliente.setTelefono(dto.telefono().trim());
+        cliente.setEmail(email);
+        cliente.setTipoCliente(dto.tipoCliente());
+        cliente.setEsFrecuente(Boolean.TRUE.equals(dto.esFrecuente()));
+
+        Cliente guardado = clienteRepository.save(cliente);
+        registrarAuditoria(
+            idOperario,
+            "Edición de cliente: " + cliente.getNumeroDocumento(),
+            TipoEvento.EDICION
+        );
+        return ClienteDTO.desde(guardado);
     }
 
     private Cliente buscarEntidadPorDocumento(String documento) {
@@ -72,5 +165,21 @@ public class ClienteService {
             throw new ReglaNegocioException("El tipo de documento debe ser DNI o CUIT.");
         }
         return normalizado;
+    }
+
+    private void registrarAuditoria(Long idOperario, String actividad, TipoEvento tipoEvento) {
+        if (idOperario == null) {
+            throw new ErrorHttpException(
+                HttpStatus.UNAUTHORIZED,
+                "No se pudo identificar al operario responsable."
+            );
+        }
+
+        Operario auditor = operarioRepository.findById(idOperario)
+            .orElseThrow(() -> new RecursoNoEncontradoException(
+                "Operario no encontrado: " + idOperario
+            ));
+
+        auditoriaService.registrar(auditor, null, actividad, tipoEvento);
     }
 }

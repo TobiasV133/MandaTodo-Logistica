@@ -29,7 +29,7 @@ public record ClienteResponse(
             cliente.getEmail(),
             cliente.getTipoCliente(),
             cliente.isEsFrecuente(),
-            null
+            cliente.getFechaCreacion()
         );
     }
 }

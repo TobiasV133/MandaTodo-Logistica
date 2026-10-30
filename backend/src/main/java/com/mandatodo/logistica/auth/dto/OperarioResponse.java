@@ -12,7 +12,7 @@ public record OperarioResponse(
     public static OperarioResponse desde(Operario operario) {
         return new OperarioResponse(
             operario.getId(),
-            operario.getEmail(),
+            operario.getUsername(),
             operario.getNombre(),
             operario.getEmail(),
             operario.getRol().name()

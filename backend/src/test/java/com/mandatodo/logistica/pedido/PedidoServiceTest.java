@@ -46,6 +46,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 @ExtendWith(MockitoExtension.class)
 class PedidoServiceTest {
@@ -85,6 +87,9 @@ class PedidoServiceTest {
             new CalendarioHabil(Set.of()),
             auditoriaService
         );
+        PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+        when(transactionManager.getTransaction(any()))
+            .thenReturn(new SimpleTransactionStatus());
         pedidoService = new PedidoService(
             clienteRepository,
             operarioRepository,
@@ -95,7 +100,8 @@ class PedidoServiceTest {
             auditoriaService,
             responseFactory,
             new TarifaService(),
-            RELOJ
+            RELOJ,
+            transactionManager
         );
 
         empresa = cliente(1L, TipoCliente.Empresa, "Distribuidora del Sur S.A.");
@@ -116,7 +122,7 @@ class PedidoServiceTest {
         when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
         when(pedidoRepository.findDelDia(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
             .thenReturn(List.of());
-        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocacion -> {
+        when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
             Pedido pedido = invocacion.getArgument(0);
             ReflectionTestUtils.setField(pedido, "id", 10L);
             return pedido;
@@ -135,7 +141,7 @@ class PedidoServiceTest {
             .containsExactly(MotivoRetencion.DIRECCION_AMBIGUA);
 
         ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
-        verify(pedidoRepository).save(pedidoCaptor.capture());
+        verify(pedidoRepository).saveAndFlush(pedidoCaptor.capture());
         assertThat(pedidoCaptor.getValue().getEstado()).isEqualTo(EstadoPedido.EN_REVISION);
 
         ArgumentCaptor<Revision> revisionCaptor = ArgumentCaptor.forClass(Revision.class);
@@ -159,7 +165,7 @@ class PedidoServiceTest {
         when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
         when(pedidoRepository.findDelDia(eq(2L), any(LocalDateTime.class), any(LocalDateTime.class)))
             .thenReturn(List.of());
-        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocacion -> {
+        when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
             Pedido pedido = invocacion.getArgument(0);
             ReflectionTestUtils.setField(pedido, "id", 11L);
             return pedido;
@@ -174,7 +180,7 @@ class PedidoServiceTest {
         assertThat(response.retencion().retenido()).isFalse();
 
         ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
-        verify(pedidoRepository).save(pedidoCaptor.capture());
+        verify(pedidoRepository).saveAndFlush(pedidoCaptor.capture());
         assertThat(pedidoCaptor.getValue().getEstado()).isEqualTo(EstadoPedido.PENDIENTE);
         verify(revisionRepository, never()).save(any(Revision.class));
 
@@ -193,7 +199,7 @@ class PedidoServiceTest {
         when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
         when(pedidoRepository.findDelDia(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
             .thenReturn(List.of(existente));
-        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocacion -> {
+        when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
             Pedido pedido = invocacion.getArgument(0);
             ReflectionTestUtils.setField(pedido, "id", 12L);
             return pedido;
@@ -225,7 +231,7 @@ class PedidoServiceTest {
         when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
         when(pedidoRepository.findDelDia(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
             .thenReturn(List.of(existente));
-        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocacion -> {
+        when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
             Pedido pedido = invocacion.getArgument(0);
             ReflectionTestUtils.setField(pedido, "id", 13L);
             return pedido;
@@ -266,7 +272,15 @@ class PedidoServiceTest {
             null,
             null,
             LocalDate.of(2026, 10, 23),
-            FiabilidadGeocodificacion.ALTA
+            FiabilidadGeocodificacion.ALTA,
+            null,
+            null,
+            new BigDecimal("10.00"),
+            null,
+            null,
+            null,
+            null,
+            null
         );
     }
 
@@ -275,6 +289,10 @@ class PedidoServiceTest {
             cliente,
             "Caja de electrónica",
             new BigDecimal("10.00"),
+            new BigDecimal("10.00"),
+            new BigDecimal("5000.00"),
+            new BigDecimal("5000.00"),
+            BigDecimal.ZERO,
             new BigDecimal("5000.00"),
             "Av. Corrientes",
             1234,

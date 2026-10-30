@@ -86,7 +86,14 @@ public class EntregaFallidaService {
                 : hoy;
         LocalDate fechaReprogramada = calendarioHabil.siguienteDiaHabil(referencia);
 
+        BigDecimal precioBase = pedido.getPrecioBase() == null
+            ? montoAnterior
+            : pedido.getPrecioBase();
+
         pedido.setMontoEnvio(montoFinal);
+        pedido.setPrecioBase(precioBase);
+        pedido.setRecargo(montoFinal.subtract(precioBase));
+        pedido.setPrecioTotal(montoFinal);
         pedido.setFechaProgramada(fechaReprogramada);
         pedido.setEstado(EstadoPedido.FALLIDO);
         pedido.setMotivoFalla(motivoFalla);

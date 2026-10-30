@@ -22,8 +22,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 
 @DataJpaTest(properties = {
     "spring.jpa.hibernate.ddl-auto=create-drop",
@@ -74,6 +74,10 @@ class PersistenciaTest {
             cliente,
             "Carga paletizada",
             new BigDecimal("25.00"),
+            new BigDecimal("18.00"),
+            new BigDecimal("25000.00"),
+            new BigDecimal("25000.00"),
+            BigDecimal.ZERO,
             new BigDecimal("25000.00"),
             "S/N",
             0,

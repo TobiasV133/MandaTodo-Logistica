@@ -21,4 +21,10 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     Optional<Cliente> findByDocumentoNormalizado(@Param("documento") String documento);
 
     List<Cliente> findAllByOrderByNombreRazonSocialAsc();
+
+    boolean existsByNumeroDocumento(String numeroDocumento);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByEmailAndIdNot(String email, Long id);
 }

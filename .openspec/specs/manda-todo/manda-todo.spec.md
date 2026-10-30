@@ -44,7 +44,9 @@ El sistema SHALL exponer los 19 endpoints definidos en la sección 4.
 
 ## 1. Stack Tecnológico Oficial
 - **Frontend:** React + Bootstrap + React-Leaflet + Lucide Icons
-- **Backend:** Java Spring Boot + Spring Data JPA
+- **Backend:** Java 21 + Spring Boot 4.0.8 + Spring Data JPA / Hibernate (Jakarta Persistence)
+- **Validación:** Jakarta Bean Validation (`jakarta.validation`) en los DTOs de entrada
+- **Seguridad:** Spring Security Crypto (`BCryptPasswordEncoder`) para el hash de contraseñas y JWT para las sesiones
 - **Database:** MySQL 8.x
 - **Geocoding API:** OpenStreetMap / Nominatim API
 
@@ -93,6 +95,7 @@ export interface Revision {
 
 export interface Operario {
   id_operario: number;
+  username: string; // UNIQUE, login
   nombre: string;
   email: string; // UNIQUE
   rol: RolOperario;

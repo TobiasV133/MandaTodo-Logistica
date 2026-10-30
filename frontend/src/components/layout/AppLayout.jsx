@@ -12,8 +12,9 @@ const TITULOS = {
   '/pedidos': 'Pedidos',
   '/en-revision': 'En revisión',
   '/clientes': 'Clientes',
-  '/usuarios': 'Usuarios',
-  '/auditoria': 'Auditoría',
+  '/operarios': 'Gestión de operarios',
+  '/usuarios': 'Gestión de operarios',
+  '/auditoria': 'Auditoría global',
 }
 
 function LayoutShell() {

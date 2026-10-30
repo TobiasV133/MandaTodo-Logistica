@@ -29,22 +29,30 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 @Service
 public class PedidoService {
 
     private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
+    private static final DateTimeFormatter FORMATO_CODIGO =
+        DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final int MAX_INTENTOS = 5;
 
     private final ClienteRepository clienteRepository;
     private final OperarioRepository operarioRepository;
@@ -56,6 +64,7 @@ public class PedidoService {
     private final PedidoResponseFactory responseFactory;
     private final TarifaService tarifaService;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public PedidoService(
         ClienteRepository clienteRepository,
@@ -67,7 +76,8 @@ public class PedidoService {
         AuditoriaService auditoriaService,
         PedidoResponseFactory responseFactory,
         TarifaService tarifaService,
-        Clock clock
+        Clock clock,
+        PlatformTransactionManager transactionManager
     ) {
         this.clienteRepository = clienteRepository;
         this.operarioRepository = operarioRepository;
@@ -79,20 +89,61 @@ public class PedidoService {
         this.responseFactory = responseFactory;
         this.tarifaService = tarifaService;
         this.clock = clock;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
-    @Transactional
     public CrearPedidoResponse crear(CrearPedidoRequest request) {
         return crear(request, request.operarioId());
     }
 
-    @Transactional
+    /**
+     * Orquesta la creación con reintentos ante colisiones del código de pedido.
+     * Cada intento corre en su propia transacción para que una excepción de
+     * integridad no deje rollback-only el contexto de persistencia.
+     */
     public CrearPedidoResponse crear(CrearPedidoRequest request, Long operarioId) {
+        for (int intento = 1; intento <= MAX_INTENTOS; intento++) {
+            try {
+                return transactionTemplate.execute(
+                    status -> crearIntento(request, operarioId, false)
+                );
+            } catch (DataIntegrityViolationException ex) {
+                if (!esColisionCodigoPedido(ex)) {
+                    throw ex;
+                }
+                log.warn(
+                    "Colisión al generar el código del pedido (intento {}/{}). Reintentando...",
+                    intento,
+                    MAX_INTENTOS
+                );
+            }
+        }
+
+        try {
+            return transactionTemplate.execute(
+                status -> crearIntento(request, operarioId, true)
+            );
+        } catch (DataIntegrityViolationException ex) {
+            if (!esColisionCodigoPedido(ex)) {
+                throw ex;
+            }
+            throw new ReglaNegocioException(
+                "No se pudo generar un código único para el pedido. Intentá nuevamente."
+            );
+        }
+    }
+
+    private CrearPedidoResponse crearIntento(
+        CrearPedidoRequest request,
+        Long operarioId,
+        boolean usarFallback
+    ) {
         Cliente cliente = resolverCliente(request);
         Operario operario = buscarOperario(operarioId);
 
         String descripcion = resolverDescripcion(request);
-        BigDecimal montoEnvio = resolverMontoEnvio(request);
+        BigDecimal kilometros = resolverKilometros(request);
+        BigDecimal montoEnvio = resolverMontoEnvio(request, kilometros);
         Integer altura = request.altura() == null ? 0 : request.altura();
         LocalDate fechaProgramada = resolverFechaProgramada(request);
         FiabilidadGeocodificacion fiabilidad = resolverFiabilidad(request);
@@ -108,6 +159,10 @@ public class PedidoService {
             cliente,
             descripcion,
             request.pesoKg(),
+            kilometros,
+            montoEnvio,
+            montoEnvio,
+            BigDecimal.ZERO,
             montoEnvio,
             request.calle().trim(),
             altura,
@@ -122,6 +177,17 @@ public class PedidoService {
         // con "Sin informar" aunque el operario la hubiera cargado al tarifar.
         pedido.setKilometros(request.kilometros());
 
+        pedido.setDescripcionPaquete(descripcion);
+
+        if (usarFallback) {
+            pedido.setCodigoPedido(generarCodigoFallback(hoy));
+        } else {
+            String prefijoCodigo = "MT-" + hoy.format(FORMATO_CODIGO) + "-";
+            long secuencial =
+                pedidoRepository.countByCodigoPedidoStartingWith(prefijoCodigo) + 1;
+            pedido.setCodigoPedido(prefijoCodigo + String.format("%06d", secuencial));
+        }
+
         EvaluacionRetencion evaluacion = new EvaluacionRetencion(
             cliente.getTipoCliente(),
             PedidoEvaluable.desde(pedido),
@@ -135,7 +201,7 @@ public class PedidoService {
         ResultadoRetencion resultado = motorRetencion.evaluar(evaluacion);
         pedido.setEstado(resultado.retenido() ? EstadoPedido.EN_REVISION : EstadoPedido.PENDIENTE);
 
-        Pedido guardado = pedidoRepository.save(pedido);
+        Pedido guardado = pedidoRepository.saveAndFlush(pedido);
         List<Revision> revisiones = new ArrayList<>();
 
         if (resultado.retenido()) {
@@ -164,6 +230,34 @@ public class PedidoService {
         );
 
         return new CrearPedidoResponse(responseFactory.crear(guardado, revisiones), resultado);
+    }
+
+    private String generarCodigoFallback(LocalDate fecha) {
+        String sufijo = UUID.randomUUID()
+            .toString()
+            .replace("-", "")
+            .substring(0, 6)
+            .toUpperCase(Locale.ROOT);
+        return "MT-" + fecha.format(FORMATO_CODIGO) + "-" + sufijo;
+    }
+
+    /**
+     * Solo se reintenta cuando la integridad falló por el código del pedido.
+     * Errores de campos obligatorios (por ejemplo descripcion_paquete) se
+     * propagan de inmediato para no ocultar el problema real.
+     */
+    private boolean esColisionCodigoPedido(DataIntegrityViolationException ex) {
+        Throwable causa = ex.getMostSpecificCause();
+        String mensaje = causa != null ? causa.getMessage() : ex.getMessage();
+        if (mensaje == null) {
+            return false;
+        }
+
+        String normalizado = mensaje.toLowerCase(Locale.ROOT);
+        return normalizado.contains("codigo_pedido")
+            || normalizado.contains("uk_pedidos_codigo_pedido")
+            || normalizado.contains("duplicate")
+            || normalizado.contains("unique");
     }
 
     @Transactional(readOnly = true)
@@ -338,11 +432,19 @@ public class PedidoService {
         return descripcion.trim();
     }
 
-    private BigDecimal resolverMontoEnvio(CrearPedidoRequest request) {
-        BigDecimal kilometros = request.kilometros() == null
-            ? BigDecimal.ZERO
-            : request.kilometros();
+    private BigDecimal resolverKilometros(CrearPedidoRequest request) {
+        if (request.kilometros() == null) {
+            throw new IllegalArgumentException(
+                "No se pudo calcular la distancia del envío. Ingresá los kilómetros del recorrido."
+            );
+        }
+        if (request.kilometros().signum() < 0) {
+            throw new IllegalArgumentException("Los kilómetros no pueden ser negativos.");
+        }
+        return request.kilometros().setScale(2, RoundingMode.HALF_UP);
+    }
 
+    private BigDecimal resolverMontoEnvio(CrearPedidoRequest request, BigDecimal kilometros) {
         if (request.montoEnvio() != null) {
             // La capacidad máxima se valida incluso si el cliente envía un monto explícito.
             tarifaService.validarCapacidad(request.pesoKg(), kilometros);

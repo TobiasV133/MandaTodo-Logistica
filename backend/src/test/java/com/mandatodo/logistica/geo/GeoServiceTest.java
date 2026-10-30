@@ -3,7 +3,7 @@ package com.mandatodo.logistica.geo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.mandatodo.logistica.geo.dto.NormalizacionResponse;
 import com.mandatodo.logistica.geo.dto.NormalizarRequest;
 import com.mandatodo.logistica.shared.error.ErrorHttpException;

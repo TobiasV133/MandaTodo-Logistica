@@ -31,4 +31,6 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     );
 
     long countByEstado(EstadoPedido estado);
+
+    long countByCodigoPedidoStartingWith(String prefijo);
 }

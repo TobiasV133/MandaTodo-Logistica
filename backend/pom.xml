@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.6</version>
+        <version>4.0.8</version>
         <relativePath/>
     </parent>
 
@@ -15,7 +15,7 @@
     <artifactId>mandatodo-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>mandatodo-backend</name>
-    <description>Backend de MandáTodo Logística: motor de retención En Revisión y entregas fallidas</description>
+    <description>Backend de MandáTodo Logística: carga, clientes, operarios, auditoría, retenciones y remitos</description>
 
     <properties>
         <java.version>21</java.version>
@@ -24,7 +24,7 @@
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -54,8 +54,19 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <version>2.3.232</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
