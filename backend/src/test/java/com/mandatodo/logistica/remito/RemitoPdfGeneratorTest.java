@@ -67,18 +67,20 @@ class RemitoPdfGeneratorTest {
     }
 
     @Test
-    void noMarcaLaReimpresionEnLaPrimeraImpresion() throws IOException {
+    void identificaLaPrimeraImpresionComoRemitoOriginal() throws IOException {
         String texto = extraerTexto(generador.generar(datos(false, null)));
 
-        assertThat(texto).doesNotContain("REIMPRESIÓN");
+        assertThat(texto)
+            .contains("REMITO ORIGINAL")
+            .doesNotContain("REMITO DUPLICADO");
     }
 
     @Test
-    void marcaLaReimpresionConElMotivoRegistrado() throws IOException {
+    void marcaLaReimpresionComoRemitoDuplicadoConElMotivoRegistrado() throws IOException {
         String texto = extraerTexto(generador.generar(datos(true, "Extravío del remito original")));
 
         assertThat(texto)
-            .contains("REIMPRESIÓN")
+            .contains("REMITO DUPLICADO")
             .contains("Motivo: Extravío del remito original");
     }
 

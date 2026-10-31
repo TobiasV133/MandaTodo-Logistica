@@ -9,12 +9,15 @@ import './utils/leafletSetup'
 
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { TarifaProvider } from './context/TarifaContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <TarifaProvider>
+          <App />
+        </TarifaProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

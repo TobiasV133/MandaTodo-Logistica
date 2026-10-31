@@ -35,7 +35,7 @@ El sistema SHALL aplicar las reglas de geolocalización, duplicados, reintentos 
 
 ### Requirement: Contrato de API REST
 
-El sistema SHALL exponer los 19 endpoints definidos en la sección 4.
+El sistema SHALL exponer los 21 endpoints definidos en la sección 4.
 
 #### Scenario: Consumo de la API
 
@@ -111,6 +111,22 @@ export interface AuditLog {
   fecha_hora: string;
 }
 
+export interface TarifaConfig {
+  id_tarifa: 1; // fila única
+  tarifa_base: number;
+  tarifa_media: number;
+  recargo_por_km: number;
+  recargo_por_kg: number;
+  limite_peso_base: number;
+  limite_km_base: number;
+  limite_peso_medio: number;
+  limite_km_medio: number;
+  max_peso_kg: number;
+  max_kilometros: number;
+  id_operario_ultima_modificacion?: number;
+  fecha_ultima_modificacion?: string;
+}
+
 ## 3. Reglas de Negocio Estrictas
 1. **Geolocalización & Normalización:**
    - La API recibe `calle`, `altura`, `localidad` y consulta Nominatim.
@@ -122,8 +138,13 @@ export interface AuditLog {
    - Al marcar estado `FALLIDO`, se exige un `motivo_falla`. Se reprograma automáticamente para el día siguiente y se aplica un **50% de recargo** sobre el `monto_envio`.
 4. **Auditoría Global Inalterable:**
    - Toda acción de Alta, Edición, Reimpresión o Cambio de Estado registra el operario responsable en la tabla `auditoria`.
+5. **Tarifario Configurable:**
+   - El tarifario escalonado (importes base, medio, recargos por km/kg, límites de cada nivel y capacidad máxima) se persiste en la fila única de `tarifa_config`.
+   - Solo un operario con rol `Admin` puede modificarlo. Los operarios con rol `Operario` reciben `403 Forbidden`.
+   - Cada modificación se registra en `auditoria` como evento de `Edición` sin pedido asociado.
+   - Los pedidos nuevos se tarifan con los valores vigentes al momento del alta.
 
-## 4. Contrato Completo de API REST (19 Endpoints)
+## 4. Contrato Completo de API REST (21 Endpoints)
 
 1. Autenticación y Sesión:
    - `POST /api/auth/login` -> Iniciar sesión de operario
@@ -159,5 +180,9 @@ export interface AuditLog {
    - `POST /api/auditoria` -> Registrar evento de auditoría
    - `GET /api/auditoria` -> Consultar listado general de logs de auditoría
    - `GET /api/auditoria?fecha=...&operario=...` -> Consultar auditoría con filtros
+
+9. Configuración del Tarifario:
+   - `GET /api/tarifas` -> Obtener los valores vigentes (cualquier operario autenticado)
+   - `PUT /api/tarifas` -> Actualizar importes y límites (solo rol `Admin`; `403` para operarios)
 
 ---

@@ -148,7 +148,7 @@ class RemitoServiceTest {
         verify(auditoriaService).registrar(
             eq(operario),
             eq(pedido),
-            contains("Remito generado para el pedido #42 (R-00000042)"),
+            contains("Remito original emitido para el pedido #42 (R-00000042)"),
             eq(TipoEvento.ALTA)
         );
     }
@@ -281,7 +281,7 @@ class RemitoServiceTest {
         verify(auditoriaService).registrar(
             eq(operario),
             eq(pedido),
-            contains("Remito reimpreso para el pedido #42 (R-00000042); motivo: Extravío del remito original"),
+            contains("Remito duplicado emitido para el pedido #42 (R-00000042); motivo: Extravío del remito original"),
             eq(TipoEvento.REIMPRESION)
         );
     }

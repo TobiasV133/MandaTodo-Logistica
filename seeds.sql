@@ -118,4 +118,25 @@ INSERT INTO auditoria (id_auditoria, id_operario, id_pedido, actividad, tipo_eve
   (16, 1, 3, 'Pedido #3 marcado como FALLIDO por Ausente; reprogramado con recargo del 50%', 'Cambio de Estado', '2026-10-20 18:20:00'),
   (17, 2, 4, 'Pedido #4 marcado como FALLIDO por Dirección Inexistente; reprogramado con recargo del 50%', 'Cambio de Estado', '2026-10-21 17:10:00');
 
+-- ============================================================
+-- 6. Configuración del tarifario
+-- Fila única con los valores por defecto del tarifario escalonado.
+-- ============================================================
+INSERT INTO tarifa_config (
+  id_tarifa,
+  tarifa_base,
+  tarifa_media,
+  recargo_por_km,
+  recargo_por_kg,
+  limite_peso_base,
+  limite_km_base,
+  limite_peso_medio,
+  limite_km_medio,
+  max_peso_kg,
+  max_kilometros,
+  id_operario_ultima_modificacion,
+  fecha_ultima_modificacion
+) VALUES
+  (1, 10000.00, 30000.00, 5000.00, 3000.00, 5.000, 5.000, 20.000, 15.000, 80.000, 30.000, NULL, NULL);
+
 COMMIT;

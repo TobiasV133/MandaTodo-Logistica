@@ -1,4 +1,5 @@
 import { useEffect, useId } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * Modal accesible basado en las clases de Bootstrap 5.
@@ -32,7 +33,7 @@ export default function Modal({
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <>
       <div className="modal-backdrop fade show" aria-hidden="true" onClick={onClose} />
       <div
@@ -63,6 +64,7 @@ export default function Modal({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

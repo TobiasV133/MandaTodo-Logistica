@@ -158,11 +158,11 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 
    ```powershell
    cd backend
-   $env:DB_USERNAME = "root"
-   $env:DB_PASSWORD = "tu_clave"
-   $env:JWT_SECRET = "una_clave_larga_para_desarrollo"
    .\mvnw.cmd spring-boot:run
    ```
+
+   Por defecto se conecta a `localhost:3306` con el usuario `root` y **sin contraseña**. Si tu
+   MySQL tiene clave, definí `$env:DB_PASSWORD` antes de arrancar.
 
 3. Iniciar el frontend:
 

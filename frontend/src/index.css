@@ -860,6 +860,13 @@ a {
   gap: 16px;
 }
 
+.page-heading__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .page-eyebrow {
   display: block;
   margin-bottom: 4px;
@@ -1993,6 +2000,7 @@ a {
 
 .success-card__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 24px;
 }
@@ -2797,6 +2805,25 @@ a {
   border-top: 1px solid var(--mt-border);
 }
 
+/* Modales con mucho contenido: limitan la altura y desplazan el cuerpo,
+   dejando siempre visibles el encabezado y las acciones. */
+.pedido-modal .modal-content {
+  max-height: 90vh;
+}
+
+.pedido-modal .modal-body {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* El tarifario tiene muchos campos dentro de un formulario. */
+.tarifa-modal .modal-content > form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
 
 
 .pedido-modal__estado {
@@ -2810,6 +2837,48 @@ a {
 .pedido-modal__motivo {
   color: var(--mt-muted);
   font-size: 0.85rem;
+}
+
+/* Cadena de cambios de estado realizados sin cerrar el modal. */
+.pedido-historial {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px dashed var(--mt-border);
+  border-radius: 12px;
+  background: var(--mt-bg);
+}
+
+.pedido-historial__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mt-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pedido-historial__cadena {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pedido-historial__paso {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mt-muted);
+}
+
+.pedido-historial__paso small {
+  font-size: 0.72rem;
+  color: var(--mt-muted);
 }
 
 .pedido-detalle {

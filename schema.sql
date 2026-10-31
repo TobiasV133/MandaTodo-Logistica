@@ -10,6 +10,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS auditoria;
 DROP TABLE IF EXISTS revisiones;
 DROP TABLE IF EXISTS pedidos;
+DROP TABLE IF EXISTS tarifa_config;
 DROP TABLE IF EXISTS clientes;
 DROP TABLE IF EXISTS operarios;
 SET FOREIGN_KEY_CHECKS = 1;
@@ -180,3 +181,41 @@ CREATE TRIGGER trg_auditoria_no_delete
 BEFORE DELETE ON auditoria
 FOR EACH ROW
 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La tabla auditoria es inalterable';
+
+-- ============================================================
+-- 6. Configuración del tarifario
+-- Fila única (id_tarifa = 1) editable por administradores.
+-- ============================================================
+CREATE TABLE tarifa_config (
+  id_tarifa INT NOT NULL,
+  tarifa_base DECIMAL(12, 2) NOT NULL,
+  tarifa_media DECIMAL(12, 2) NOT NULL,
+  recargo_por_km DECIMAL(12, 2) NOT NULL,
+  recargo_por_kg DECIMAL(12, 2) NOT NULL,
+  limite_peso_base DECIMAL(10, 3) NOT NULL,
+  limite_km_base DECIMAL(10, 3) NOT NULL,
+  limite_peso_medio DECIMAL(10, 3) NOT NULL,
+  limite_km_medio DECIMAL(10, 3) NOT NULL,
+  max_peso_kg DECIMAL(10, 3) NOT NULL,
+  max_kilometros DECIMAL(10, 3) NOT NULL,
+  id_operario_ultima_modificacion INT NULL,
+  fecha_ultima_modificacion DATETIME NULL,
+  PRIMARY KEY (id_tarifa),
+  KEY idx_tarifa_config_operario (id_operario_ultima_modificacion),
+  CONSTRAINT chk_tarifa_config_unica CHECK (id_tarifa = 1),
+  CONSTRAINT chk_tarifa_config_tarifa_base CHECK (tarifa_base >= 0),
+  CONSTRAINT chk_tarifa_config_tarifa_media CHECK (tarifa_media >= 0),
+  CONSTRAINT chk_tarifa_config_recargo_km CHECK (recargo_por_km >= 0),
+  CONSTRAINT chk_tarifa_config_recargo_kg CHECK (recargo_por_kg >= 0),
+  CONSTRAINT chk_tarifa_config_limites CHECK (
+    limite_peso_base > 0
+    AND limite_km_base > 0
+    AND limite_peso_medio > limite_peso_base
+    AND limite_km_medio > limite_km_base
+    AND max_peso_kg > limite_peso_medio
+    AND max_kilometros > limite_km_medio
+  ),
+  CONSTRAINT fk_tarifa_config_operario
+    FOREIGN KEY (id_operario_ultima_modificacion) REFERENCES operarios (id_operario)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

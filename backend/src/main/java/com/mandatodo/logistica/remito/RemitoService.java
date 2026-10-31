@@ -139,7 +139,7 @@ public class RemitoService {
         log.info(
             "Remito {} {} para el pedido {} por el operario {}",
             datos.numero(),
-            reimpresion ? "reimpreso" : "generado",
+            reimpresion ? "duplicado" : "original",
             pedido.getId(),
             operario.getId()
         );
@@ -197,14 +197,14 @@ public class RemitoService {
         String numero = DatosRemito.numeroDe(pedido.getId());
         StringBuilder texto = new StringBuilder();
         if (reimpresion) {
-            texto.append("Remito reimpreso para el pedido #")
+            texto.append("Remito duplicado emitido para el pedido #")
                 .append(pedido.getId())
                 .append(" (")
                 .append(numero)
                 .append("); motivo: ")
                 .append(motivo);
         } else {
-            texto.append("Remito generado para el pedido #")
+            texto.append("Remito original emitido para el pedido #")
                 .append(pedido.getId())
                 .append(" (")
                 .append(numero)

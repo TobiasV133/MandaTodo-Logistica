@@ -12,7 +12,7 @@ Todos los endpoints requieren `Authorization: Bearer <token>` salvo `POST /api/a
 
 | Endpoint | Descripción |
 | --- | --- |
-| `POST /api/auth/login` | Login por email y contraseña (BCrypt). Devuelve el JWT y los datos del operario. |
+| `POST /api/auth/login` | Login por usuario (o email) y contraseña (BCrypt). Devuelve el JWT y los datos del operario. |
 | `GET /api/auth/me` | Devuelve el operario autenticado a partir del JWT. |
 | `POST /api/geo/normalizar` | Normaliza y geocodifica una dirección con OpenStreetMap/Nominatim. |
 | `GET /api/clientes` | Lista los clientes ordenados por razón social. |
@@ -48,8 +48,11 @@ mysql --default-character-set=utf8mb4 -u root -p < schema.sql
 mysql --default-character-set=utf8mb4 -u root -p < seeds.sql
 
 cd backend
-DB_USERNAME=root DB_PASSWORD=tu_clave JWT_SECRET=una_clave_larga ./mvnw spring-boot:run
+./mvnw spring-boot:run
 ```
+
+Por defecto el backend usa `localhost:3306`, usuario `root` y **sin contraseña**. Si tu MySQL
+tiene clave, exportá `DB_PASSWORD` antes de arrancarlo.
 
 En PowerShell la redirección `<` no funciona directamente. Usá `cmd /c` para conservar la
 codificación UTF-8 del esquema y de los seeds:
@@ -66,9 +69,6 @@ En PowerShell, el wrapper no requiere Maven instalado:
 
 ```powershell
 cd backend
-$env:DB_USERNAME = "root"
-$env:DB_PASSWORD = "tu_clave"
-$env:JWT_SECRET = "una_clave_larga_para_desarrollo"
 .\mvnw.cmd spring-boot:run
 ```
 

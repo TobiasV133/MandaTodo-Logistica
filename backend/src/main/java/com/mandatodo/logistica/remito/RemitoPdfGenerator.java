@@ -32,7 +32,9 @@ import org.springframework.util.StringUtils;
  * y del cliente, el detalle de la carga con kilos y kilómetros, el importe y el espacio de firma y
  * aclaración del receptor.
  *
- * <p>La reimpresión se marca con una banda roja que repite el motivo registrado en la auditoría.</p>
+ * <p>La primera impresión se identifica como «Remito Original» y no pide motivo. Las reimpresiones
+ * se identifican como «Remito Duplicado» y llevan una banda roja con el motivo registrado en la
+ * auditoría.</p>
  */
 @Component
 public class RemitoPdfGenerator {
@@ -131,7 +133,7 @@ public class RemitoPdfGenerator {
 
         PdfPCell derecha = sinBorde();
         derecha.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        derecha.addElement(parrafoDerecha("REMITO", ETIQUETA));
+        derecha.addElement(parrafoDerecha(tipoRemito(datos), ETIQUETA));
         derecha.addElement(parrafoDerecha(datos.numero(), NUMERO));
         derecha.addElement(parrafoDerecha(
             "Emitido: " + datos.fechaEmision().format(FECHA_HORA),
@@ -155,7 +157,7 @@ public class RemitoPdfGenerator {
         celda.setBorderColor(ROJO);
         celda.setBorderWidth(0.8f);
         celda.setPadding(8);
-        celda.addElement(new Paragraph("REIMPRESIÓN", BANNER_TITULO));
+        celda.addElement(new Paragraph("REMITO DUPLICADO", BANNER_TITULO));
         celda.addElement(new Paragraph(
             "Motivo: " + datos.motivoReimpresion()
                 + ". Este ejemplar queda registrado en la auditoría del sistema.",
@@ -382,6 +384,10 @@ public class RemitoPdfGenerator {
         return formato.format(valor);
     }
 
+    private String tipoRemito(DatosRemito datos) {
+        return datos.reimpresion() ? "REMITO DUPLICADO" : "REMITO ORIGINAL";
+    }
+
     private String estado(String valor) {
         return switch (valor) {
             case "EN_REVISION" -> "En revisión";
@@ -417,7 +423,9 @@ public class RemitoPdfGenerator {
                 lienzo,
                 Element.ALIGN_LEFT,
                 new Phrase(
-                    "Remito " + datos.numero() + " · Documento no válido como factura",
+                    "Remito " + datos.numero()
+                        + " · " + (datos.reimpresion() ? "Duplicado" : "Original")
+                        + " · Documento no válido como factura",
                     PIE
                 ),
                 documento.leftMargin(),

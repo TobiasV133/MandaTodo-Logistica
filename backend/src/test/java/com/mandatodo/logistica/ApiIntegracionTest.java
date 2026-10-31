@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,6 +24,7 @@ import com.mandatodo.logistica.operario.OperarioRepository;
 import com.mandatodo.logistica.operario.RolOperario;
 import com.mandatodo.logistica.pedido.Pedido;
 import com.mandatodo.logistica.pedido.PedidoRepository;
+import com.mandatodo.logistica.security.JwtAuthInterceptor;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -378,6 +380,95 @@ class ApiIntegracionTest {
             .andExpect(header().string("X-Remito-Reimpresion", "true"));
 
         assertThat(auditoriaRepository.findAllByOrderByFechaHoraDesc()).hasSize(2);
+    }
+
+    @Test
+    void devuelveElTarifarioVigentePorDefecto() throws Exception {
+        mvc.perform(get("/api/tarifas"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tarifaBase").value(10000.00))
+            .andExpect(jsonPath("$.tarifaMedia").value(30000.00))
+            .andExpect(jsonPath("$.recargoPorKm").value(5000.00))
+            .andExpect(jsonPath("$.recargoPorKg").value(3000.00))
+            .andExpect(jsonPath("$.limitePesoBase").value(5.00))
+            .andExpect(jsonPath("$.limiteKmMedio").value(15.00))
+            .andExpect(jsonPath("$.maxPesoKg").value(80.00))
+            .andExpect(jsonPath("$.maxKilometros").value(30.00));
+    }
+
+    @Test
+    void unAdministradorActualizaElTarifarioYAfectaElCalculoDeNuevosPedidos() throws Exception {
+        mvc.perform(put("/api/tarifas")
+                .requestAttr(JwtAuthInterceptor.ATTR_ID_OPERARIO, operario.getId())
+                .requestAttr(JwtAuthInterceptor.ATTR_ROL, "Admin")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tarifaBase": 12000.00,
+                      "tarifaMedia": 36000.00,
+                      "recargoPorKm": 6000.00,
+                      "recargoPorKg": 3500.00,
+                      "limitePesoBase": 6.000,
+                      "limiteKmBase": 6.000,
+                      "limitePesoMedio": 25.000,
+                      "limiteKmMedio": 18.000,
+                      "maxPesoKg": 90.000,
+                      "maxKilometros": 35.000
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tarifaBase").value(12000.00))
+            .andExpect(jsonPath("$.limitePesoMedio").value(25.00));
+
+        mvc.perform(get("/api/tarifas"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tarifaMedia").value(36000.00));
+
+        mvc.perform(post("/api/pedidos")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "operarioId": %d,
+                      "clienteId": %d,
+                      "descripcion": "Carga con tarifa configurada",
+                      "pesoKg": 21.00,
+                      "kilometros": 16.00,
+                      "calle": "Av. Corrientes",
+                      "altura": 1234,
+                      "localidad": "Ciudad Autónoma de Buenos Aires"
+                    }
+                    """.formatted(operario.getId(), pedido.getCliente().getId())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.pedido.montoEnvio").value(36000.00));
+
+        assertThat(auditoriaRepository.findAllByOrderByFechaHoraDesc())
+            .anyMatch(evento -> evento.getActividad().contains("Tarifario actualizado"));
+    }
+
+    @Test
+    void unOperarioNoPuedeActualizarElTarifario() throws Exception {
+        mvc.perform(put("/api/tarifas")
+                .requestAttr(JwtAuthInterceptor.ATTR_ID_OPERARIO, operario.getId())
+                .requestAttr(JwtAuthInterceptor.ATTR_ROL, "Operario")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tarifaBase": 1.00,
+                      "tarifaMedia": 1.00,
+                      "recargoPorKm": 1.00,
+                      "recargoPorKg": 1.00,
+                      "limitePesoBase": 1.000,
+                      "limiteKmBase": 1.000,
+                      "limitePesoMedio": 2.000,
+                      "limiteKmMedio": 2.000,
+                      "maxPesoKg": 10.000,
+                      "maxKilometros": 10.000
+                    }
+                    """))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value(
+                "Solo un administrador puede modificar el tarifario."
+            ));
     }
 
     private String extraerTexto(byte[] pdf) throws IOException {

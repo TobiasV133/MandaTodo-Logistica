@@ -14,6 +14,8 @@ import com.mandatodo.logistica.pedido.dto.PedidoResponseFactory;
 import com.mandatodo.logistica.revision.dto.ResolverRevisionRequest;
 import com.mandatodo.logistica.shared.error.RecursoNoEncontradoException;
 import com.mandatodo.logistica.shared.error.ReglaNegocioException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -175,6 +177,13 @@ public class RevisionService {
         }
         if (StringUtils.hasText(request.localidad())) {
             pedido.setLocalidad(request.localidad().trim());
+        }
+        if (request.montoEnvio() != null) {
+            BigDecimal monto = request.montoEnvio().setScale(2, RoundingMode.HALF_UP);
+            pedido.setMontoEnvio(monto);
+            pedido.setPrecioBase(monto);
+            pedido.setRecargo(BigDecimal.ZERO);
+            pedido.setPrecioTotal(monto);
         }
         if (request.latitud() != null) {
             pedido.setLatitud(request.latitud());

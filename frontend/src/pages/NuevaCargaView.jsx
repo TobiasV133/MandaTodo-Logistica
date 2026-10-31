@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import AddressMap from '../components/map/AddressMap'
@@ -8,10 +8,11 @@ import Icon from '../components/ui/Icon'
 import ResumenPedido from '../components/wizard/ResumenPedido'
 import Stepper from '../components/wizard/Stepper'
 import { useResumen } from '../context/ResumenContext'
+import { useTarifa } from '../context/TarifaContext'
 import { getApiErrorMessage } from '../services/api'
 import { buscarPorDocumento } from '../services/clienteService'
 import { normalizarDireccion } from '../services/geoService'
-import { crearPedido } from '../services/pedidoService'
+import { crearPedido, imprimirRemito } from '../services/pedidoService'
 import {
   documentoCompleto,
   formatearDocumento,
@@ -27,13 +28,7 @@ import {
 } from '../utils/formatters'
 import {
   calcularTarifa,
-  MAX_KILOMETROS,
-  MAX_PESO_KG,
-  MENSAJE_CAPACIDAD,
-  RECARGO_POR_KG,
-  RECARGO_POR_KM,
-  TARIFA_BASE,
-  TARIFA_MEDIA,
+  mensajeCapacidad,
 } from '../utils/tarifas'
 
 const CLIENTE_INICIAL = {
@@ -76,6 +71,7 @@ function StepHeader({ number, title, description }) {
 export default function NuevaCargaView() {
   const navigate = useNavigate()
   const { refresh: refreshResumen } = useResumen()
+  const { tarifa: tarifaConfig } = useTarifa()
 
   const [paso, setPaso] = useState(1)
   const [cliente, setCliente] = useState(CLIENTE_INICIAL)
@@ -97,6 +93,11 @@ export default function NuevaCargaView() {
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState('')
   const [pedidoCreado, setPedidoCreado] = useState(null)
+
+  const descargaRemitoRef = useRef(null)
+  const [generandoRemito, setGenerandoRemito] = useState(false)
+  const [remitoMensaje, setRemitoMensaje] = useState('')
+  const [remitoError, setRemitoError] = useState('')
 
   const actualizarUbicacion = useCallback(({ latitud: nuevaLatitud, longitud: nuevaLongitud }) => {
     setGeo((prev) =>
@@ -129,16 +130,16 @@ export default function NuevaCargaView() {
 
   const tarifa = useMemo(() => {
     try {
-      return calcularTarifa(detalle.pesoKg, detalle.kilometros)
+      return calcularTarifa(detalle.pesoKg, detalle.kilometros, tarifaConfig)
     } catch (error) {
       return {
         precioBase: 0,
         recargo: 0,
         precioTotal: 0,
-        error: error instanceof Error ? error.message : MENSAJE_CAPACIDAD,
+        error: error instanceof Error ? error.message : mensajeCapacidad(tarifaConfig),
       }
     }
-  }, [detalle.pesoKg, detalle.kilometros])
+  }, [detalle.pesoKg, detalle.kilometros, tarifaConfig])
 
   const prediccion = useMemo(() => {
     if (esAmbigua || !direccionValidada) {
@@ -308,14 +309,14 @@ export default function NuevaCargaView() {
     const peso = Number(detalle.pesoKg)
     if (!Number.isFinite(peso) || peso <= 0) {
       nuevos.pesoKg = 'El peso debe ser mayor a 0.'
-    } else if (peso > MAX_PESO_KG) {
-      nuevos.pesoKg = MENSAJE_CAPACIDAD
+    } else if (peso > tarifaConfig.maxPesoKg) {
+      nuevos.pesoKg = mensajeCapacidad(tarifaConfig)
     }
     const kilometros = Number(detalle.kilometros)
     if (!Number.isFinite(kilometros) || kilometros < 0 || detalle.kilometros === '') {
       nuevos.kilometros = 'Ingresá los kilómetros del recorrido.'
-    } else if (kilometros > MAX_KILOMETROS) {
-      nuevos.kilometros = MENSAJE_CAPACIDAD
+    } else if (kilometros > tarifaConfig.maxKilometros) {
+      nuevos.kilometros = mensajeCapacidad(tarifaConfig)
     }
     setErrores(nuevos)
     return Object.keys(nuevos).length === 0
@@ -421,6 +422,31 @@ export default function NuevaCargaView() {
     }
   }
 
+  const generarRemito = async (idPedido) => {
+    setGenerandoRemito(true)
+    setRemitoError('')
+    setRemitoMensaje('')
+    try {
+      const data = await imprimirRemito(idPedido)
+      const url = URL.createObjectURL(data.blob)
+      if (descargaRemitoRef.current) {
+        descargaRemitoRef.current.href = url
+        descargaRemitoRef.current.download = `remito-${idPedido}.pdf`
+        descargaRemitoRef.current.click()
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 15000)
+      setRemitoMensaje(
+        `Remito ${data.numero ?? ''} ${data.reimpresion ? 'duplicado' : 'original'} generado correctamente.`,
+      )
+    } catch (err) {
+      setRemitoError(
+        getApiErrorMessage(err, 'No se pudo generar el remito. Intentá nuevamente.'),
+      )
+    } finally {
+      setGenerandoRemito(false)
+    }
+  }
+
   const reiniciar = () => {
     setPaso(1)
     setCliente({ ...CLIENTE_INICIAL })
@@ -437,6 +463,8 @@ export default function NuevaCargaView() {
     setErrores({})
     setErrorEnvio('')
     setPedidoCreado(null)
+    setRemitoMensaje('')
+    setRemitoError('')
   }
 
   if (pedidoCreado) {
@@ -486,10 +514,38 @@ export default function NuevaCargaView() {
             </div>
           </div>
 
+          {remitoError && (
+            <div className="alert alert-danger text-start mt-3" role="alert">
+              {remitoError}
+            </div>
+          )}
+          {remitoMensaje && (
+            <div className="alert alert-success text-start mt-3" role="status">
+              {remitoMensaje}
+            </div>
+          )}
+
           <div className="success-card__actions">
+            <a ref={descargaRemitoRef} className="d-none" aria-hidden="true">
+              Descargar remito
+            </a>
             <button type="button" className="btn btn-outline-secondary" onClick={reiniciar}>
               <Icon name="plus" size={17} />
               Registrar otro pedido
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline-primary"
+              onClick={() => generarRemito(creado.idPedido)}
+              disabled={generandoRemito || creado.estado === 'EN_REVISION'}
+              title={
+                creado.estado === 'EN_REVISION'
+                  ? 'Resolvé la revisión antes de generar el remito'
+                  : 'Se genera como Remito Original'
+              }
+            >
+              <Icon name="package" size={17} />
+              {generandoRemito ? 'Generando…' : 'Generar remito'}
             </button>
             <button
               type="button"
@@ -500,6 +556,15 @@ export default function NuevaCargaView() {
               <Icon name="arrowRight" size={17} />
             </button>
           </div>
+          {creado.estado === 'EN_REVISION' ? (
+            <p className="text-muted small mt-3 mb-0">
+              El remito se habilita cuando se resuelva la revisión.
+            </p>
+          ) : (
+            <p className="text-muted small mt-3 mb-0">
+              La primera impresión se emite como <strong>Remito Original</strong>.
+            </p>
+          )}
         </div>
       </div>
     )
@@ -902,7 +967,7 @@ export default function NuevaCargaView() {
                       type="number"
                       inputMode="decimal"
                       min="0.01"
-                      max={MAX_PESO_KG}
+                      max={tarifaConfig.maxPesoKg}
                       step="0.01"
                       name="pesoKg"
                       className={`form-control ${errores.pesoKg ? 'is-invalid' : ''}`}
@@ -922,7 +987,7 @@ export default function NuevaCargaView() {
                       type="number"
                       inputMode="decimal"
                       min="0"
-                      max={MAX_KILOMETROS}
+                      max={tarifaConfig.maxKilometros}
                       step="0.1"
                       name="kilometros"
                       className={`form-control ${errores.kilometros ? 'is-invalid' : ''}`}
@@ -959,11 +1024,14 @@ export default function NuevaCargaView() {
             )}
 
             <p className="tariff-note">
-              Tarifa escalonada: {formatMoneda(TARIFA_BASE)} hasta 5 kg y 5 km;{' '}
-              {formatMoneda(TARIFA_MEDIA)} si supera 5 kg o 5 km, hasta 20 kg y 15 km;{' '}
-              {formatMoneda(RECARGO_POR_KM)} por km extra y {formatMoneda(RECARGO_POR_KG)} por kg
-              extra. Máximo {MAX_PESO_KG} kg / {MAX_KILOMETROS} km. El backend recalcula el importe
-              al confirmar.
+              Tarifa escalonada: {formatMoneda(tarifaConfig.tarifaBase)} hasta{' '}
+              {tarifaConfig.limitePesoBase} kg y {tarifaConfig.limiteKmBase} km;{' '}
+              {formatMoneda(tarifaConfig.tarifaMedia)} si supera esos límites, hasta{' '}
+              {tarifaConfig.limitePesoMedio} kg y {tarifaConfig.limiteKmMedio} km;{' '}
+              {formatMoneda(tarifaConfig.recargoPorKm)} por km extra y{' '}
+              {formatMoneda(tarifaConfig.recargoPorKg)} por kg extra. Máximo{' '}
+              {tarifaConfig.maxPesoKg} kg / {tarifaConfig.maxKilometros} km. El backend recalcula
+              el importe al confirmar.
             </p>
           </section>
         )}

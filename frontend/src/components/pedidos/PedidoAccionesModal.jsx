@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
+import { getEstadoInfo } from '../../constants/estados'
 import { getApiErrorMessage } from '../../services/api'
 import {
   cambiarEstado,
@@ -12,6 +14,18 @@ import Icon from '../ui/Icon'
 
 const MOTIVOS_FALLA = ['Ausente', 'Dirección Inexistente', 'Dirección Incompleta']
 
+function horaActual() {
+  return new Date().toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+function nombreEstado(estado) {
+  return getEstadoInfo(estado).label
+}
+
 function Dato({ label, children }) {
   return (
     <div className="pedido-dato">
@@ -23,17 +37,21 @@ function Dato({ label, children }) {
 
 export default function PedidoAccionesModal({
   pedido,
-  soloRevision = false,
   onClose,
   onUpdated,
 }) {
   const descargaRef = useRef(null)
+  const [pedidoActual, setPedidoActual] = useState(pedido)
+  const [historial, setHistorial] = useState([])
   const [formulario, setFormulario] = useState(null)
   const [motivoFalla, setMotivoFalla] = useState(MOTIVOS_FALLA[0])
   const [notaFalla, setNotaFalla] = useState('')
   const [motivoCancelacion, setMotivoCancelacion] = useState('')
   const [motivoReimpresion, setMotivoReimpresion] = useState('')
   const [kilometros, setKilometros] = useState(pedido.kilometros ?? '')
+  const [montoEnvio, setMontoEnvio] = useState(
+    pedido.montoEnvio ?? pedido.precioTotal ?? '',
+  )
   const [correccion, setCorreccion] = useState({
     calle: pedido.calle ?? '',
     altura: pedido.altura ?? '',
@@ -45,10 +63,10 @@ export default function PedidoAccionesModal({
   const [exito, setExito] = useState('')
   const [resultado, setResultado] = useState(null)
 
-  const estado = pedido.estado
-  const esRevision = soloRevision || estado === 'EN_REVISION'
-  const puedeRemito = estado !== 'EN_REVISION' && estado !== 'CANCELADO_EN_TRANSITO'
-  const monto = pedido.montoEnvio ?? pedido.precioTotal
+  const estado = pedidoActual.estado
+  const esRevision = estado === 'EN_REVISION'
+  const puedeRemito = !esRevision && estado !== 'CANCELADO_EN_TRANSITO'
+  const monto = pedidoActual.montoEnvio ?? pedidoActual.precioTotal
 
   const ejecutar = async (accion) => {
     setLoading(true)
@@ -72,14 +90,25 @@ export default function PedidoAccionesModal({
     )
     if (!data) return
 
+    const actualizado = data.pedido
+    setPedidoActual(actualizado)
+    setResultado(nuevoEstado === 'FALLIDO' ? data : null)
+    setHistorial((prev) => [...prev, { estado: actualizado.estado, hora: horaActual() }])
+
     if (nuevoEstado === 'FALLIDO') {
       setExito(
         `Entrega fallida registrada. Recargo aplicado: ${formatMoneda(
           data.recargoAplicado,
-        )}. Nueva fecha programada: ${formatFecha(data.fechaReprogramada)}.`,
+        )}. Nueva fecha programada: ${formatFecha(data.fechaReprogramada)}. Podés reintentar el envío desde este mismo panel.`,
       )
     } else {
-      setExito(`El pedido pasó a ${nuevoEstado.replaceAll('_', ' ')}.`)
+      const esTerminal =
+        actualizado.estado === 'ENTREGADO' || actualizado.estado === 'CANCELADO_EN_TRANSITO'
+      setExito(
+        esTerminal
+          ? `El pedido pasó a ${nombreEstado(actualizado.estado)}. Es un estado terminal: no admite más cambios.`
+          : `El pedido pasó a ${nombreEstado(actualizado.estado)}. Podés seguir cambiando el estado desde este panel.`,
+      )
     }
     setFormulario(null)
     await onUpdated?.()
@@ -95,6 +124,7 @@ export default function PedidoAccionesModal({
       }
       if (correccion.pisoDepto.trim()) payload.pisoDepto = correccion.pisoDepto.trim()
       if (correccion.localidad.trim()) payload.localidad = correccion.localidad.trim()
+      if (montoEnvio !== '' && montoEnvio != null) payload.montoEnvio = Number(montoEnvio)
     } else {
       payload.motivoFalla = motivoFalla
       if (notaFalla.trim()) payload.notaFalla = notaFalla.trim()
@@ -103,9 +133,11 @@ export default function PedidoAccionesModal({
     const data = await ejecutar(() => resolverRevision(pedido.idPedido, payload))
     if (!data) return
 
+    setPedidoActual(data)
+    setHistorial((prev) => [...prev, { estado: data.estado, hora: horaActual() }])
     setExito(
       accion === 'APROBAR'
-        ? 'Revisión aprobada. El pedido pasó a PENDIENTE.'
+        ? 'Revisión aprobada. El pedido pasó a PENDIENTE y ya podés gestionarlo desde este panel.'
         : `Revisión rechazada. Se registró la entrega fallida por ${motivoFalla}.`,
     )
     setFormulario(null)
@@ -129,7 +161,7 @@ export default function PedidoAccionesModal({
       }
       window.setTimeout(() => URL.revokeObjectURL(url), 15000)
       setExito(
-        `Remito ${data.numero ?? ''} ${data.reimpresion ? 'reimpreso' : 'generado'} correctamente.`,
+        `Remito ${data.numero ?? ''} ${data.reimpresion ? 'duplicado' : 'original'} generado correctamente.`,
       )
       await onUpdated?.()
     } catch (err) {
@@ -144,7 +176,7 @@ export default function PedidoAccionesModal({
     }
   }
 
-  return (
+  return createPortal(
     <>
       <div
         className="modal fade show d-block pedido-modal"
@@ -158,7 +190,7 @@ export default function PedidoAccionesModal({
               <div>
                 <span className="page-eyebrow">Gestión del pedido</span>
                 <h2 className="modal-title fs-5" id="pedido-modal-titulo">
-                  {pedido.codigoPedido}
+                  {pedidoActual.codigoPedido}
                 </h2>
               </div>
               <button
@@ -173,34 +205,56 @@ export default function PedidoAccionesModal({
             <div className="modal-body">
               <div className="pedido-modal__estado">
                 <EstadoBadge estado={estado} />
-                {pedido.motivoRevision && (
-                  <span className="pedido-modal__motivo">{pedido.motivoRevision}</span>
+                {pedidoActual.motivoRevision && (
+                  <span className="pedido-modal__motivo">{pedidoActual.motivoRevision}</span>
                 )}
               </div>
 
+              {historial.length > 0 && (
+                <div className="pedido-historial" role="status" aria-label="Cambios de estado de esta sesión">
+                  <span className="pedido-historial__label">
+                    <Icon name="history" size={15} />
+                    Cambios en esta sesión
+                  </span>
+                  <div className="pedido-historial__cadena">
+                    {historial.map((paso, indice) => (
+                      <span className="pedido-historial__paso" key={`${paso.estado}-${indice}`}>
+                        {indice > 0 && <Icon name="arrowRight" size={14} />}
+                        <EstadoBadge estado={paso.estado} />
+                        <small>{paso.hora}</small>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="pedido-detalle">
-                <Dato label="Cliente">{pedido.nombreCliente}</Dato>
-                <Dato label="Documento">{pedido.numeroDocumento}</Dato>
-                <Dato label="Dirección">{pedido.direccionCompleta}</Dato>
-                <Dato label="Paquete">{pedido.descripcionPaquete ?? pedido.descripcion}</Dato>
+                <Dato label="Cliente">{pedidoActual.nombreCliente}</Dato>
+                <Dato label="Documento">{pedidoActual.numeroDocumento}</Dato>
+                <Dato label="Dirección">{pedidoActual.direccionCompleta}</Dato>
+                <Dato label="Paquete">
+                  {pedidoActual.descripcionPaquete ?? pedidoActual.descripcion}
+                </Dato>
                 <Dato label="Peso">
-                  {pedido.pesoKg != null ? `${formatPeso(pedido.pesoKg)} kg` : null}
+                  {pedidoActual.pesoKg != null ? `${formatPeso(pedidoActual.pesoKg)} kg` : null}
                 </Dato>
                 <Dato label="Monto del envío">{formatMoneda(monto)}</Dato>
-                <Dato label="Fecha de alta">{formatFechaHora(pedido.fechaCreacion)}</Dato>
+                <Dato label="Fecha de alta">{formatFechaHora(pedidoActual.fechaCreacion)}</Dato>
                 <Dato label="Fecha programada">
-                  {formatFecha(pedido.fechaProgramadaEntrega ?? pedido.fechaProgramada)}
+                  {formatFecha(
+                    pedidoActual.fechaProgramadaEntrega ?? pedidoActual.fechaProgramada,
+                  )}
                 </Dato>
               </div>
 
-              {pedido.motivoFalla && (
+              {pedidoActual.motivoFalla && (
                 <div className="alert alert-warning mt-3 mb-0" role="status">
-                  <strong>Última entrega fallida:</strong> {pedido.motivoFalla}
+                  <strong>Última entrega fallida:</strong> {pedidoActual.motivoFalla}
                 </div>
               )}
-              {pedido.motivoCancelacion && (
+              {pedidoActual.motivoCancelacion && (
                 <div className="alert alert-secondary mt-3 mb-0" role="status">
-                  <strong>Motivo de cancelación:</strong> {pedido.motivoCancelacion}
+                  <strong>Motivo de cancelación:</strong> {pedidoActual.motivoCancelacion}
                 </div>
               )}
 
@@ -228,14 +282,16 @@ export default function PedidoAccionesModal({
                 </div>
               )}
 
-              {esRevision && !exito && (
+              {esRevision && (
                 <section className="pedido-acciones__bloque">
                   <h3>
                     <Icon name="alert" size={18} />
                     Resolver revisión
                   </h3>
                   <p>
-                    Aprobá si la dirección es correcta o rechazá indicando el motivo de la falla.
+                    Corregí la dirección o el importe del envío y aprobá; también podés rechazar
+                    indicando el motivo de la falla. Estas correcciones solo están disponibles en
+                    pedidos en revisión.
                   </p>
 
                   {formulario === 'rechazar' ? (
@@ -285,11 +341,11 @@ export default function PedidoAccionesModal({
                         </button>
                       </div>
                     </div>
-                  ) : formulario === 'aprobar' ? (
+                  ) : (
                     <div className="pedido-formulario">
                       <p className="pedido-formulario__nota">
-                        Podés corregir la dirección antes de aprobar. Si no necesitás cambios, aprobá
-                        directamente.
+                        Podés corregir la dirección y el importe del envío. Los cambios se guardan
+                        junto con la aprobación; si no necesitás cambios, aprobá directamente.
                       </p>
                       <div className="row g-2">
                         <div className="col-md-7">
@@ -346,15 +402,30 @@ export default function PedidoAccionesModal({
                             }
                           />
                         </div>
+                        <div className="col-md-6">
+                          <label className="form-label" htmlFor="correccion-monto">
+                            Importe del envío
+                          </label>
+                          <input
+                            id="correccion-monto"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="form-control"
+                            value={montoEnvio}
+                            onChange={(event) => setMontoEnvio(event.target.value)}
+                          />
+                        </div>
                       </div>
                       <div className="pedido-formulario__acciones">
                         <button
                           type="button"
-                          className="btn btn-outline-secondary btn-sm"
-                          onClick={() => setFormulario(null)}
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => setFormulario('rechazar')}
                           disabled={loading}
                         >
-                          Volver
+                          <Icon name="x" size={16} />
+                          Rechazar
                         </button>
                         <button
                           type="button"
@@ -362,36 +433,16 @@ export default function PedidoAccionesModal({
                           onClick={() => resolver('APROBAR')}
                           disabled={loading}
                         >
-                          Aprobar y pasar a pendiente
+                          <Icon name="checkCircle" size={16} />
+                          Guardar y aprobar
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="pedido-acciones__botones">
-                      <button
-                        type="button"
-                        className="btn btn-success btn-sm"
-                        onClick={() => setFormulario('aprobar')}
-                        disabled={loading}
-                      >
-                        <Icon name="checkCircle" size={16} />
-                        Aprobar revisión
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline-danger btn-sm"
-                        onClick={() => setFormulario('rechazar')}
-                        disabled={loading}
-                      >
-                        <Icon name="x" size={16} />
-                        Rechazar
-                      </button>
                     </div>
                   )}
                 </section>
               )}
 
-              {!esRevision && !exito && (
+              {!esRevision && (
                 <section className="pedido-acciones__bloque">
                   <h3>
                     <Icon name="truck" size={18} />
@@ -577,7 +628,7 @@ export default function PedidoAccionesModal({
                   <div className="row g-2 align-items-end">
                     <div className="col-md-7">
                       <label className="form-label" htmlFor="motivo-reimpresion">
-                        Motivo de reimpresión (solo si ya se imprimió)
+                        Motivo de reimpresión (obligatorio solo si ya se imprimió)
                       </label>
                       <input
                         id="motivo-reimpresion"
@@ -614,8 +665,10 @@ export default function PedidoAccionesModal({
                     </div>
                   </div>
                   <p className="pedido-formulario__nota mt-2">
-                    El remito incluye el detalle, los kilos, los kilómetros y la firma. Se imprimen
-                    los kilómetros cargados al dar de alta el pedido; si los corregís acá, esa
+                    La primera impresión sale como <strong>Remito Original</strong> y no pide
+                    motivo. Si ya se imprimió antes, el PDF sale como{' '}
+                    <strong>Remito Duplicado</strong> y el motivo es obligatorio. Se imprimen los
+                    kilómetros cargados al dar de alta el pedido; si los corregís acá, esa
                     corrección es la que sale en el PDF.
                   </p>
                 </section>
@@ -639,6 +692,7 @@ export default function PedidoAccionesModal({
         </div>
       </div>
       <div className="modal-backdrop fade show" />
-    </>
+    </>,
+    document.body,
   )
 }
