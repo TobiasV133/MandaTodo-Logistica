@@ -14,7 +14,7 @@ function badgeTipoCliente(tipoCliente) {
   return tipoCliente === 'Empresa' ? 'bg-primary' : 'bg-success'
 }
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 
 export default function ClientesPage() {
   const { operario } = useAuth()

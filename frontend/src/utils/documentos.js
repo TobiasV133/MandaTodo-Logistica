@@ -1,3 +1,5 @@
+export const LONGITUD_MAXIMA_DOCUMENTO = 11
+
 export const TIPOS_DOCUMENTO = [
   { value: 'DNI', label: 'DNI' },
   { value: 'CUIT', label: 'CUIT' },
@@ -20,6 +22,18 @@ export function documentoCompleto(tipoDocumento, numeroDocumento) {
   const digitos = soloDigitos(numeroDocumento)
   if (tipoDocumento === 'CUIT') return digitos.length === 11
   return digitos.length === 7 || digitos.length === 8
+}
+
+/**
+ * Detecta el tipo documento a partir de la cantidad de dígitos:
+ * 11 dígitos => CUIT; 7 u 8 dígitos => DNI. Permite autocompletar el
+ * cliente aunque el usuario haya ingresado el CUIT con el tipo DNI (o viceversa).
+ */
+export function tipoDocumentoPorDigitos(numeroDocumento) {
+  const digitos = soloDigitos(numeroDocumento)
+  if (digitos.length === 11) return 'CUIT'
+  if (digitos.length >= 7 && digitos.length <= 8) return 'DNI'
+  return null
 }
 
 export function validarDocumento(tipoDocumento, numeroDocumento) {

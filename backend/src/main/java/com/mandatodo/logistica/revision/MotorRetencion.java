@@ -1,9 +1,7 @@
 package com.mandatodo.logistica.revision;
 
-import com.mandatodo.logistica.cliente.TipoCliente;
 import com.mandatodo.logistica.pedido.FiabilidadGeocodificacion;
 import com.mandatodo.logistica.shared.texto.TextoNormalizador;
-import java.math.BigDecimal;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -12,20 +10,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Motor de retención "En Revisión".
+ * Motor de retención "En Revisión" por dirección.
  *
  * <p>Reglas implementadas:
  * <ol>
  *   <li>Dirección ambigua: altura nula o 0, calle "S/N" o sin número, calle o
  *       localidad vacía, o geocodificación con fiabilidad media/baja.</li>
- *   <li>Posible duplicado comercial: cliente Empresa con un pedido idéntico
- *       creado el mismo día. La firma compara descripción, peso, monto, calle,
- *       altura, piso/depto y localidad, normalizando mayúsculas y acentos.</li>
  * </ol>
  *
- * <p>Los clientes Particular nunca se retienen por duplicado, tal como indica
- * la especificación. La exención de clientes frecuentes que existe en el
- * prototipo no se aplica acá porque la spec no la define como regla de backend.
+ * <p>El duplicado del día no se evalúa acá: lo resuelve
+ * {@code PedidoService#validarYGuardarPedido(Pedido)} consultando la base
+ * (mismo cliente y misma fecha). Esta separación evita dos fuentes de verdad
+ * para la misma regla de negocio.
  */
 @Component
 public class MotorRetencion {
@@ -36,11 +32,6 @@ public class MotorRetencion {
 
         Set<AlertaRetencion> alertas = new LinkedHashSet<>();
         evaluarDireccion(evaluacion.pedido(), evaluacion.fiabilidad(), alertas);
-
-        if (evaluacion.tipoCliente() == TipoCliente.Empresa
-            && hayDuplicado(evaluacion.pedido(), evaluacion.pedidosDelMismoDia())) {
-            alertas.add(AlertaRetencion.DUPLICADO_EMPRESA);
-        }
 
         List<MotivoRetencion> motivos = alertas.stream()
             .map(AlertaRetencion::getMotivo)
@@ -72,42 +63,5 @@ public class MotorRetencion {
         } else if (fiabilidad == FiabilidadGeocodificacion.MEDIA) {
             alertas.add(AlertaRetencion.FIABILIDAD_MEDIA);
         }
-    }
-
-    private boolean hayDuplicado(PedidoEvaluable nuevo, List<PedidoEvaluable> candidatos) {
-        if (candidatos == null || candidatos.isEmpty()) {
-            return false;
-        }
-        return candidatos.stream().anyMatch(candidato ->
-            mismaFecha(nuevo, candidato) && mismaFirma(nuevo, candidato)
-        );
-    }
-
-    private boolean mismaFecha(PedidoEvaluable nuevo, PedidoEvaluable candidato) {
-        if (nuevo.fechaCreacion() == null || candidato.fechaCreacion() == null) {
-            return true;
-        }
-        return nuevo.fechaCreacion().toLocalDate().equals(candidato.fechaCreacion().toLocalDate());
-    }
-
-    private boolean mismaFirma(PedidoEvaluable nuevo, PedidoEvaluable candidato) {
-        return texto(nuevo.descripcion()).equals(texto(candidato.descripcion()))
-            && decimalIgual(nuevo.pesoKg(), candidato.pesoKg())
-            && decimalIgual(nuevo.montoEnvio(), candidato.montoEnvio())
-            && texto(nuevo.calle()).equals(texto(candidato.calle()))
-            && Objects.equals(nuevo.altura(), candidato.altura())
-            && texto(nuevo.pisoDepto()).equals(texto(candidato.pisoDepto()))
-            && texto(nuevo.localidad()).equals(texto(candidato.localidad()));
-    }
-
-    private String texto(String valor) {
-        return TextoNormalizador.normalizarParaComparar(valor);
-    }
-
-    private boolean decimalIgual(BigDecimal primero, BigDecimal segundo) {
-        if (primero == null || segundo == null) {
-            return primero == segundo;
-        }
-        return primero.compareTo(segundo) == 0;
     }
 }

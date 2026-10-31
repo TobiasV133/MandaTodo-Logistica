@@ -115,11 +115,11 @@ class PersistenciaTest {
 
         assertThat(clienteRepository.findByNumeroDocumento("30-71234567-8")).isPresent();
         assertThat(pedidoRepository.findConClientePorId(pedido.getId())).isPresent();
-        assertThat(pedidoRepository.findDelDia(
+        assertThat(pedidoRepository.existsByClienteIdAndFechaProgramadaAndEstadoNot(
             cliente.getId(),
-            LocalDate.of(2026, 10, 23).atStartOfDay(),
-            LocalDate.of(2026, 10, 24).atStartOfDay()
-        )).hasSize(1);
+            LocalDate.of(2026, 10, 23),
+            com.mandatodo.logistica.pedido.EstadoPedido.CANCELADO_EN_TRANSITO
+        )).isTrue();
         assertThat(revisionRepository.findByPedidoIdAndEstadoResolucionOrderByIdAsc(
             pedido.getId(),
             EstadoResolucion.PENDIENTE

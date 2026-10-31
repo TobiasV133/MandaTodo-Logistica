@@ -84,7 +84,8 @@ CREATE TABLE pedidos (
   motivo_falla ENUM(
     'Ausente',
     'Dirección Inexistente',
-    'Dirección Incompleta'
+    'Dirección Incompleta',
+    'Pedido Duplicado'
   ) NULL,
   motivo_cancelacion VARCHAR(255) NULL,
   calle VARCHAR(150) NOT NULL,
@@ -132,7 +133,7 @@ CREATE TABLE revisiones (
   id_pedido INT NOT NULL,
   motivo_retencion ENUM(
     'Dirección ambigua',
-    'Posible duplicado comercial'
+    'Posible duplicado de local'
   ) NOT NULL,
   estado_resolucion ENUM('PENDIENTE', 'APROBADO', 'RECHAZADO') NOT NULL DEFAULT 'PENDIENTE',
   PRIMARY KEY (id_revision),

@@ -195,6 +195,18 @@ class ApiIntegracionTest {
 
         long idNuevo = json.readTree(creado).path("pedido").path("idPedido").asLong();
 
+        // El alta puede quedar retenida (por duplicado local u otra retención): resolver
+        // la revisión antes de poder imprimir el remito, si corresponde.
+        String estadoCreado = json.readTree(creado).path("pedido").path("estado").asText();
+        if ("EN_REVISION".equals(estadoCreado)) {
+            mvc.perform(put("/api/pedidos/{id}/revision", idNuevo)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        { "accion": "APROBAR", "operarioId": %d }
+                        """.formatted(operario.getId())))
+                .andExpect(status().isOk());
+        }
+
         // Sin kilometros en el request: el remito debe usar los guardados en el alta.
         MvcResult remito = mvc.perform(post("/api/remitos/{id}/imprimir", idNuevo)
                 .accept(MediaType.APPLICATION_PDF, MediaType.APPLICATION_JSON)

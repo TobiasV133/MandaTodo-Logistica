@@ -212,4 +212,35 @@ class RevisionServiceTest {
             eq(TipoEvento.CAMBIO_DE_ESTADO)
         );
     }
+
+    @Test
+    void rechazarRevisionPorDuplicadoRegistraElMotivoDeDuplicado() {
+        ResolverRevisionRequest request = new ResolverRevisionRequest(
+            AccionRevision.RECHAZAR,
+            1L,
+            MotivoFalla.PEDIDO_DUPLICADO,
+            "Pedido duplicado del mismo día para cliente Empresa",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
+
+        revisionService.resolver(7L, request);
+
+        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.FALLIDO);
+        assertThat(pedido.getMotivoFalla()).isEqualTo(MotivoFalla.PEDIDO_DUPLICADO);
+        assertThat(pedido.getMontoEnvio()).isEqualByComparingTo("15000.00");
+        assertThat(revision.getEstadoResolucion()).isEqualTo(EstadoResolucion.RECHAZADO);
+
+        verify(auditoriaService).registrar(
+            eq(operario),
+            eq(pedido),
+            contains("Revisión RECHAZADA"),
+            eq(TipoEvento.EDICION)
+        );
+    }
 }

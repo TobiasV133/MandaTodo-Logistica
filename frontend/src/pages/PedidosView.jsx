@@ -15,7 +15,7 @@ import { formatFechaHora, formatMoneda, formatPeso } from '../utils/formatters'
 
 const FILTROS = [{ value: 'TODOS', label: 'Todos' }, ...ESTADOS_LISTA]
 const VALORES_FILTRO = new Set(FILTROS.map((item) => item.value))
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 
 function normalizarFiltro(valor) {
   const estado = typeof valor === 'string' ? valor.trim().toUpperCase() : ''
@@ -115,7 +115,7 @@ export default function PedidosView({ soloRevision = false }) {
           <h2>{soloRevision ? 'Pedidos en revisión' : 'Pedidos'}</h2>
           <p>
             {soloRevision
-              ? 'Cargas retenidas por dirección ambigua o por posible duplicado comercial.'
+              ? 'Cargas retenidas por dirección ambigua o por posible duplicado de local.'
               : 'Todas las cargas registradas en MandáTodo, ordenadas por fecha.'}
           </p>
         </div>

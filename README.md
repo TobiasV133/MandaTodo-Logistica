@@ -8,7 +8,7 @@
 
 MandáTodo Logística es una plataforma de gestión de envíos orientada a pequeñas y medianas empresas de transporte urbano. Su objetivo principal es **prevenir los viajes en vano** mediante la normalización y geocodificación de direcciones antes de que un pedido salga a la calle, la consolidación de una libreta digital de clientes y una trazabilidad operativa inalterable.
 
-El sistema combina la validación de direcciones con OpenStreetMap/Nominatim, una bandeja de seguridad para pedidos con información ambigua o posible duplicado comercial, y un circuito de estados que contempla reintentos de entrega con recargo. Cada alta, edición, reimpresión o cambio de estado queda registrado en una auditoría global que no admite modificaciones ni eliminaciones.
+El sistema combina la validación de direcciones con OpenStreetMap/Nominatim, una bandeja de seguridad para pedidos con información ambigua o posible duplicado local, y un circuito de estados que contempla reintentos de entrega con recargo. Cada alta, edición, reimpresión o cambio de estado queda registrado en una auditoría global que no admite modificaciones ni eliminaciones.
 
 La solución se desarrolla bajo un enfoque **Spec-Driven Development (SDD)**: la especificación viva es la fuente de verdad y toda implementación debe verificarse contra ella.
 
@@ -73,7 +73,7 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 
 - **`clientes`**: libreta digital de clientes. Almacena `tipo_documento`, `numero_documento` (UNIQUE), `nombre_razon_social`, `telefono`, `email`, `tipo_cliente` (`Particular` / `Empresa`) y `es_frecuente`.
 - **`pedidos`**: núcleo operativo. Referencia a `clientes` y registra descripción, peso, monto de envío, estado, motivo de falla, dirección normalizada (`calle`, `altura`, `piso_depto`, `localidad`), coordenadas, fechas y motivo de cancelación en tránsito.
-- **`revisiones`**: bandeja de seguridad. Referencia a `pedidos` y retiene aquellos casos con `Dirección ambigua` o `Posible duplicado comercial`, con resolución `PENDIENTE`, `APROBADO` o `RECHAZADO`.
+- **`revisiones`**: bandeja de seguridad. Referencia a `pedidos` y retiene aquellos casos con `Dirección ambigua` o `Posible duplicado de local`, con resolución `PENDIENTE`, `APROBADO` o `RECHAZADO`.
 - **`operarios`**: usuarios del sistema. Incluye `username` (UNIQUE, login), `email` (UNIQUE), `password_hash`, `rol` (`Admin` / `Operario`) y `estado` (`Activo` / `Inactivo`).
 - **`auditoria`**: registro global e inalterable. Referencia al `operario` responsable y, opcionalmente, al `pedido`; almacena `actividad`, `tipo_evento` (`Alta`, `Edición`, `Reimpresión`, `Cambio de Estado`) y `fecha_hora`.
 
@@ -103,11 +103,11 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 
 - `clientes.numero_documento` y `operarios.email` son **UNIQUE**.
 - Las claves foráneas usan `ON DELETE RESTRICT`: no se puede eliminar un cliente con pedidos, un pedido con revisiones/auditoría ni un operario con eventos asociados.
-- `pedidos.estado = 'FALLIDO'` exige `motivo_falla` (`Ausente`, `Dirección Inexistente` o `Dirección Incompleta`). El pedido se reprograma para el día siguiente y se aplica un **50% de recargo** sobre `monto_envio`.
+- `pedidos.estado = 'FALLIDO'` exige `motivo_falla` (`Ausente`, `Dirección Inexistente`, `Dirección Incompleta` o `Pedido Duplicado`). El pedido se reprograma para el día siguiente y se aplica un **50% de recargo** sobre `monto_envio`.
 - `pedidos.estado = 'CANCELADO_EN_TRANSITO'` exige `motivo_cancelacion`.
 - Una dirección con altura `0`, calle `S/N` o geocodificación no confiable genera una revisión por `Dirección ambigua` y deja el pedido en `EN_REVISION`.
 - Si la dirección queda ambigua, el operario puede arrastrar el pin o hacer clic en el mapa para corregir la ubicación. El pedido se registra con las coordenadas corregidas, sigue en `EN_REVISION` y la auditoría del alta deja constancia del ajuste manual.
-- Un pedido idéntico de un cliente `Empresa` registrado el mismo día genera una revisión por `Posible duplicado comercial`; para clientes `Particular` el pedido pasa directamente a `PENDIENTE`.
+- Un pedido idéntico de un cliente `Empresa` registrado el mismo día genera una revisión por `Posible duplicado de local`; para clientes `Particular` el pedido pasa directamente a `PENDIENTE`.
 - La tabla `auditoria` es **append-only**: los triggers `trg_auditoria_no_update` y `trg_auditoria_no_delete` bloquean `UPDATE` y `DELETE` a nivel de base de datos.
 
 ## 5. Principales endpoints de la API REST

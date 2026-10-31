@@ -16,8 +16,10 @@ import { crearPedido, imprimirRemito } from '../services/pedidoService'
 import {
   documentoCompleto,
   formatearDocumento,
+  LONGITUD_MAXIMA_DOCUMENTO,
   longitudDocumento,
   soloDigitos,
+  tipoDocumentoPorDigitos,
   TIPOS_CLIENTE,
   TIPOS_DOCUMENTO,
   validarDocumento,
@@ -155,7 +157,7 @@ export default function NuevaCargaView() {
         tone: 'info',
         icon: 'info',
         title: 'Posible revisión comercial',
-        detail: 'Si ya existe un pedido idéntico hoy, el backend lo enviará a revisión.',
+        detail: 'Si ya existe un pedido con la misma fecha programada, el backend lo enviará a revisión.',
       }
     }
     return {
@@ -167,7 +169,8 @@ export default function NuevaCargaView() {
   }, [cliente.tipoCliente, esAmbigua, direccionValidada])
 
   useEffect(() => {
-    const completo = documentoCompleto(cliente.tipoDocumento, cliente.numeroDocumento)
+    const tipoResuelto = tipoDocumentoPorDigitos(cliente.numeroDocumento) ?? cliente.tipoDocumento
+    const completo = documentoCompleto(tipoResuelto, cliente.numeroDocumento)
 
     if (!completo) {
       return undefined
@@ -191,6 +194,9 @@ export default function NuevaCargaView() {
           email: encontrado.email ?? '',
           tipoCliente: encontrado.tipoCliente ?? 'Particular',
           esFrecuente: Boolean(encontrado.esFrecuente),
+          ...(tipoResuelto !== cliente.tipoDocumento
+            ? { tipoDocumento: tipoResuelto }
+            : {}),
         }))
       } catch (err) {
         if (!activo) return
@@ -222,10 +228,9 @@ export default function NuevaCargaView() {
   }
 
   const cambiarDocumento = (event) => {
-    const numeroDocumento = soloDigitos(event.target.value).slice(
-      0,
-      longitudDocumento(cliente.tipoDocumento),
-    )
+    const digitos = soloDigitos(event.target.value)
+    const tipoResuelto = tipoDocumentoPorDigitos(digitos) ?? cliente.tipoDocumento
+    const numeroDocumento = digitos.slice(0, longitudDocumento(tipoResuelto))
 
     setCliente((prev) => ({
       ...prev,
@@ -238,6 +243,9 @@ export default function NuevaCargaView() {
             tipoCliente: 'Particular',
             esFrecuente: false,
           }
+        : {}),
+      ...(tipoResuelto !== cliente.tipoDocumento
+        ? { tipoDocumento: tipoResuelto }
         : {}),
     }))
     setClienteExistente(null)
@@ -632,7 +640,7 @@ export default function NuevaCargaView() {
                       placeholder={cliente.tipoDocumento === 'CUIT' ? '20123456789' : '12345678'}
                       value={cliente.numeroDocumento}
                       onChange={cambiarDocumento}
-                      maxLength={longitudDocumento(cliente.tipoDocumento)}
+                      maxLength={LONGITUD_MAXIMA_DOCUMENTO}
                       autoComplete="off"
                     />
                     {buscaCliente && (

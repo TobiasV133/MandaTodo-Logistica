@@ -7,7 +7,8 @@ import com.mandatodo.logistica.shared.texto.TextoNormalizador;
 public enum MotivoFalla {
     AUSENTE("Ausente"),
     DIRECCION_INEXISTENTE("Dirección Inexistente"),
-    DIRECCION_INCOMPLETA("Dirección Incompleta");
+    DIRECCION_INCOMPLETA("Dirección Incompleta"),
+    PEDIDO_DUPLICADO("Pedido Duplicado");
 
     private final String valor;
 

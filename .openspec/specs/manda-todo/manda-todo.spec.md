@@ -54,7 +54,7 @@ El sistema SHALL exponer los 21 endpoints definidos en la sección 4.
 
 export type TipoCliente = 'Particular' | 'Empresa';
 export type EstadoPedido = 'PENDIENTE' | 'EN_REVISION' | 'EN_TRANSITO' | 'CANCELADO_EN_TRANSITO' | 'ENTREGADO' | 'FALLIDO';
-export type MotivoFalla = 'Ausente' | 'Dirección Inexistente' | 'Dirección Incompleta';
+export type MotivoFalla = 'Ausente' | 'Dirección Inexistente' | 'Dirección Incompleta' | 'Pedido Duplicado';
 export type RolOperario = 'Admin' | 'Operario';
 
 export interface Cliente {
@@ -89,7 +89,7 @@ export interface Pedido {
 export interface Revision {
   id_revision: number;
   id_pedido: number;
-  motivo_retencion: 'Dirección ambigua' | 'Posible duplicado comercial';
+  motivo_retencion: 'Dirección ambigua' | 'Posible duplicado de local';
   estado_resolucion: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
 }
 
@@ -132,8 +132,8 @@ export interface TarifaConfig {
    - La API recibe `calle`, `altura`, `localidad` y consulta Nominatim.
    - Si la altura es 0, la calle es "S/N" o el resultado no es confiable, se genera un registro en `revisiones` con motivo `"Dirección ambigua"` y el pedido pasa a `EN_REVISION`.
 2. **Control de Duplicados Comerciales:**
-   - Si un cliente tipo `'Empresa'` registra un pedido idéntico el mismo día, pasa a `EN_REVISION` con motivo `"Posible duplicado comercial"`.
-   - Si es `'Particular'`, el pedido pasa a `PENDIENTE` directamente.
+   - Si un cliente tipo `'Empresa'` registra un pedido con la misma fecha programada que otro ya registrado, pasa a `EN_REVISION` con motivo `"Posible duplicado de local"` (búsqueda por el mismo cliente y la misma fecha programada, asumiendo el mismo destino).
+   - Si es `'Particular'`, el pedido pasa a `PENDIENTE` directamente (el duplicado se permite).
 3. **Reintento de Entregas Fallidas:**
    - Al marcar estado `FALLIDO`, se exige un `motivo_falla`. Se reprograma automáticamente para el día siguiente y se aplica un **50% de recargo** sobre el `monto_envio`.
 4. **Auditoría Global Inalterable:**

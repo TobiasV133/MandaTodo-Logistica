@@ -94,7 +94,7 @@ INSERT INTO pedidos (
 -- ============================================================
 INSERT INTO revisiones (id_revision, id_pedido, motivo_retencion, estado_resolucion) VALUES
   (1, 7, 'Dirección ambigua', 'PENDIENTE'),
-  (2, 8, 'Posible duplicado comercial', 'PENDIENTE');
+  (2, 8, 'Posible duplicado de local', 'PENDIENTE');
 
 -- ============================================================
 -- 5. Auditoría
@@ -109,7 +109,7 @@ INSERT INTO auditoria (id_auditoria, id_operario, id_pedido, actividad, tipo_eve
   (7, 2, 3, 'Alta de pedido #3 para María Elena Rodríguez', 'Alta', '2026-10-18 14:10:00'),
   (8, 1, 5, 'Pedido #5 entregado', 'Cambio de Estado', '2026-10-18 15:40:00'),
   (9, 2, 2, 'Alta de pedido #2 para Almacén Central S.R.L.', 'Alta', '2026-10-19 08:30:00'),
-  (10, 2, 8, 'Alta de pedido #8 retenido por Posible duplicado comercial', 'Alta', '2026-10-19 09:05:00'),
+  (10, 2, 8, 'Alta de pedido #8 retenido por Posible duplicado de local', 'Alta', '2026-10-19 09:05:00'),
   (11, 2, 2, 'Pedido #2 puesto en tránsito', 'Cambio de Estado', '2026-10-19 10:00:00'),
   (12, 2, 9, 'Alta de pedido #9 para Logística Norte S.A.', 'Alta', '2026-10-19 13:00:00'),
   (13, 1, 9, 'Pedido #9 cancelado en tránsito a pedido del cliente', 'Cambio de Estado', '2026-10-19 15:30:00'),

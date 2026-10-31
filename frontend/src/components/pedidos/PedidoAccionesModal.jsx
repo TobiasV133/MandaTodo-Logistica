@@ -12,7 +12,7 @@ import { formatFecha, formatFechaHora, formatMoneda, formatPeso } from '../../ut
 import EstadoBadge from '../ui/EstadoBadge'
 import Icon from '../ui/Icon'
 
-const MOTIVOS_FALLA = ['Ausente', 'Dirección Inexistente', 'Dirección Incompleta']
+const MOTIVOS_FALLA = ['Ausente', 'Dirección Inexistente', 'Dirección Incompleta', 'Pedido Duplicado']
 
 function horaActual() {
   return new Date().toLocaleTimeString('es-AR', {
