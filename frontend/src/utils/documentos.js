@@ -25,15 +25,13 @@ export function documentoCompleto(tipoDocumento, numeroDocumento) {
 }
 
 /**
- * Detecta el tipo documento a partir de la cantidad de dígitos:
- * 11 dígitos => CUIT; 7 u 8 dígitos => DNI. Permite autocompletar el
- * cliente aunque el usuario haya ingresado el CUIT con el tipo DNI (o viceversa).
+ * Resuelve el tipo de documento mientras se escribe sin pisar la selección
+ * del usuario: nunca degrada un CUIT a DNI (eso truncaba el número a 8 dígitos
+ * mientras se tipeaba) y solo promueve a CUIT cuando se completan los 11 dígitos.
  */
-export function tipoDocumentoPorDigitos(numeroDocumento) {
-  const digitos = soloDigitos(numeroDocumento)
-  if (digitos.length === 11) return 'CUIT'
-  if (digitos.length >= 7 && digitos.length <= 8) return 'DNI'
-  return null
+export function tipoDocumentoAlEscribir(tipoActual, numeroDocumento) {
+  if (tipoActual === 'CUIT') return 'CUIT'
+  return soloDigitos(numeroDocumento).length === 11 ? 'CUIT' : tipoActual || 'DNI'
 }
 
 export function validarDocumento(tipoDocumento, numeroDocumento) {

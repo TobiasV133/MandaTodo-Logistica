@@ -8,7 +8,7 @@ import { listarAuditoria } from '../services/auditoriaService'
 import { listarOperarios } from '../services/operarioService'
 import { formatFechaHora } from '../utils/formatters'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 
 function badgeTipoEvento(tipoEvento) {
   switch (tipoEvento) {

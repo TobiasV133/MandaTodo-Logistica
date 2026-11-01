@@ -17,9 +17,8 @@ import {
   documentoCompleto,
   formatearDocumento,
   LONGITUD_MAXIMA_DOCUMENTO,
-  longitudDocumento,
   soloDigitos,
-  tipoDocumentoPorDigitos,
+  tipoDocumentoAlEscribir,
   TIPOS_CLIENTE,
   TIPOS_DOCUMENTO,
   validarDocumento,
@@ -169,8 +168,7 @@ export default function NuevaCargaView() {
   }, [cliente.tipoCliente, esAmbigua, direccionValidada])
 
   useEffect(() => {
-    const tipoResuelto = tipoDocumentoPorDigitos(cliente.numeroDocumento) ?? cliente.tipoDocumento
-    const completo = documentoCompleto(tipoResuelto, cliente.numeroDocumento)
+    const completo = documentoCompleto(cliente.tipoDocumento, cliente.numeroDocumento)
 
     if (!completo) {
       return undefined
@@ -194,9 +192,6 @@ export default function NuevaCargaView() {
           email: encontrado.email ?? '',
           tipoCliente: encontrado.tipoCliente ?? 'Particular',
           esFrecuente: Boolean(encontrado.esFrecuente),
-          ...(tipoResuelto !== cliente.tipoDocumento
-            ? { tipoDocumento: tipoResuelto }
-            : {}),
         }))
       } catch (err) {
         if (!activo) return
@@ -219,7 +214,12 @@ export default function NuevaCargaView() {
 
   const cambiarTipoDocumento = (event) => {
     const tipoDocumento = event.target.value
-    setCliente({ ...CLIENTE_INICIAL, tipoDocumento })
+    // Se conservan los dígitos ya tipeados: cambiar el tipo no debe borrar el número.
+    setCliente((prev) => ({
+      ...CLIENTE_INICIAL,
+      tipoDocumento,
+      numeroDocumento: soloDigitos(prev.numeroDocumento).slice(0, LONGITUD_MAXIMA_DOCUMENTO),
+    }))
     setClienteExistente(null)
     setBuscaCliente(false)
     setConsultaRealizada(false)
@@ -229,8 +229,8 @@ export default function NuevaCargaView() {
 
   const cambiarDocumento = (event) => {
     const digitos = soloDigitos(event.target.value)
-    const tipoResuelto = tipoDocumentoPorDigitos(digitos) ?? cliente.tipoDocumento
-    const numeroDocumento = digitos.slice(0, longitudDocumento(tipoResuelto))
+    const tipoDocumento = tipoDocumentoAlEscribir(cliente.tipoDocumento, digitos)
+    const numeroDocumento = digitos.slice(0, LONGITUD_MAXIMA_DOCUMENTO)
 
     setCliente((prev) => ({
       ...prev,
@@ -244,9 +244,7 @@ export default function NuevaCargaView() {
             esFrecuente: false,
           }
         : {}),
-      ...(tipoResuelto !== cliente.tipoDocumento
-        ? { tipoDocumento: tipoResuelto }
-        : {}),
+      tipoDocumento,
     }))
     setClienteExistente(null)
     setBuscaCliente(false)
