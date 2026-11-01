@@ -43,6 +43,7 @@ export default function PedidoAccionesModal({
   const descargaRef = useRef(null)
   const [pedidoActual, setPedidoActual] = useState(pedido)
   const [historial, setHistorial] = useState([])
+  const [scrollInicial] = useState(() => window.scrollY)
   const [formulario, setFormulario] = useState(null)
   const [motivoFalla, setMotivoFalla] = useState(MOTIVOS_FALLA[0])
   const [notaFalla, setNotaFalla] = useState('')
@@ -179,7 +180,8 @@ export default function PedidoAccionesModal({
   return createPortal(
     <>
       <div
-        className="modal fade show d-block pedido-modal"
+        className="modal fade show d-block portal-modal pedido-modal"
+        style={{ top: scrollInicial }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="pedido-modal-titulo"
