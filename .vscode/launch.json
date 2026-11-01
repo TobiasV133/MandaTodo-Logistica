@@ -10,11 +10,7 @@
       // Se evita el modo "integratedTerminal": el debug adapter espera leer
       // "Listening for transport dt_socket" de la terminal y, si no llega a tiempo,
       // falla con com.sun.jdi.connect.TransportTimeoutException.
-      "console": "internalConsole",
-      "env": {
-        "DB_USERNAME": "root",
-        "DB_PASSWORD": "${input:dbPassword}"
-      }
+      "console": "internalConsole"
     },
     {
       "type": "node",
@@ -37,14 +33,6 @@
       "name": "Full stack: backend + frontend",
       "configurations": ["Backend: Spring Boot", "Frontend: Vite"],
       "stopAll": true
-    }
-  ],
-  "inputs": [
-    {
-      "id": "dbPassword",
-      "type": "promptString",
-      "description": "Contraseña de MySQL para DB_PASSWORD (dejar vacío si no tiene)",
-      "password": true
     }
   ]
 }

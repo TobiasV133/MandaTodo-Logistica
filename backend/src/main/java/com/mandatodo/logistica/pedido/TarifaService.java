@@ -1,66 +1,84 @@
 package com.mandatodo.logistica.pedido;
 
+import com.mandatodo.logistica.tarifa.TarifaConfigService;
+import com.mandatodo.logistica.tarifa.TarifaValores;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
  * Tarifario escalonado de MandaTodo.
  *
  * <ul>
- *   <li>Nivel 1: hasta 5 kg y hasta 5 km, $10.000.</li>
- *   <li>Nivel 2: supera 5 kg o 5 km, sin superar 20 kg ni 15 km, $30.000.</li>
- *   <li>Nivel 3: más de 20 kg o más de 15 km, $30.000 más $5.000 por km extra y
- *       $3.000 por kg extra.</li>
+ *   <li>Nivel 1: hasta el límite base de kg y km, tarifa base.</li>
+ *   <li>Nivel 2: hasta el límite medio de kg y km, tarifa media.</li>
+ *   <li>Nivel 3: supera el nivel medio y suma el recargo por km extra y por kg extra.</li>
  * </ul>
  *
- * <p>La capacidad máxima es de 80 kg y 30 km. Los valores que superen esos límites no se
+ * <p>Los importes y los límites se leen de {@link TarifaConfigService} y se pueden editar
+ * desde la pantalla de pedidos. Si no hay configuración guardada se usan
+ * {@link TarifaValores#POR_DEFECTO}. Los valores que superan la capacidad máxima no se
  * tarifan: se lanza {@link IllegalArgumentException} con el mensaje de capacidad excedida.</p>
  */
 @Service
 public class TarifaService {
 
-    public static final BigDecimal TARIFA_BASE = new BigDecimal("10000.00");
-    public static final BigDecimal TARIFA_MEDIA = new BigDecimal("30000.00");
-    public static final BigDecimal RECARGO_POR_KM = new BigDecimal("5000.00");
-    public static final BigDecimal RECARGO_POR_KG = new BigDecimal("3000.00");
-    public static final BigDecimal MAX_PESO_KG = new BigDecimal("80.00");
-    public static final BigDecimal MAX_KILOMETROS = new BigDecimal("30.00");
     public static final String MENSAJE_CAPACIDAD_EXCEDIDA =
-        "El pedido excede la capacidad logística máxima (80kg / 30km)";
+        TarifaValores.POR_DEFECTO.mensajeCapacidad();
 
-    private static final BigDecimal LIMITE_PESO_BASE = new BigDecimal("5.00");
-    private static final BigDecimal LIMITE_KM_BASE = new BigDecimal("5.00");
-    private static final BigDecimal LIMITE_PESO_MEDIO = new BigDecimal("20.00");
-    private static final BigDecimal LIMITE_KM_MEDIO = new BigDecimal("15.00");
+    private final TarifaConfigService tarifaConfigService;
 
     /**
-     * Calcula el precio total del envío según el tarifario escalonado.
+     * Constructor sin dependencias para pruebas unitarias y usos aislados: opera con los
+     * valores por defecto.
+     */
+    public TarifaService() {
+        this.tarifaConfigService = null;
+    }
+
+    @Autowired
+    public TarifaService(TarifaConfigService tarifaConfigService) {
+        this.tarifaConfigService = tarifaConfigService;
+    }
+
+    /**
+     * Calcula el precio total del envío según el tarifario vigente.
      *
      * @throws IllegalArgumentException si el peso o la distancia superan la capacidad máxima
      */
     public BigDecimal calcular(BigDecimal pesoKg, BigDecimal kilometros) {
+        return calcular(pesoKg, kilometros, valoresVigentes());
+    }
+
+    public BigDecimal calcular(
+        BigDecimal pesoKg,
+        BigDecimal kilometros,
+        TarifaValores tarifa
+    ) {
         BigDecimal peso = valorNoNulo(pesoKg);
         BigDecimal distancia = valorNoNulo(kilometros);
 
-        validarCapacidad(peso, distancia);
+        validarCapacidad(peso, distancia, tarifa);
 
-        if (peso.compareTo(LIMITE_PESO_BASE) <= 0
-            && distancia.compareTo(LIMITE_KM_BASE) <= 0) {
-            return TARIFA_BASE;
+        if (peso.compareTo(tarifa.limitePesoBase()) <= 0
+            && distancia.compareTo(tarifa.limiteKmBase()) <= 0) {
+            return tarifa.tarifaBase().setScale(2, RoundingMode.HALF_UP);
         }
 
-        if (peso.compareTo(LIMITE_PESO_MEDIO) <= 0
-            && distancia.compareTo(LIMITE_KM_MEDIO) <= 0) {
-            return TARIFA_MEDIA;
+        if (peso.compareTo(tarifa.limitePesoMedio()) <= 0
+            && distancia.compareTo(tarifa.limiteKmMedio()) <= 0) {
+            return tarifa.tarifaMedia().setScale(2, RoundingMode.HALF_UP);
         }
 
-        BigDecimal kilometrosExtra = distancia.subtract(LIMITE_KM_MEDIO).max(BigDecimal.ZERO);
-        BigDecimal pesoExtra = peso.subtract(LIMITE_PESO_MEDIO).max(BigDecimal.ZERO);
-        BigDecimal recargo = kilometrosExtra.multiply(RECARGO_POR_KM)
-            .add(pesoExtra.multiply(RECARGO_POR_KG));
+        BigDecimal kilometrosExtra = distancia.subtract(tarifa.limiteKmMedio())
+            .max(BigDecimal.ZERO);
+        BigDecimal pesoExtra = peso.subtract(tarifa.limitePesoMedio())
+            .max(BigDecimal.ZERO);
+        BigDecimal recargo = kilometrosExtra.multiply(tarifa.recargoPorKm())
+            .add(pesoExtra.multiply(tarifa.recargoPorKg()));
 
-        return TARIFA_MEDIA.add(recargo).setScale(2, RoundingMode.HALF_UP);
+        return tarifa.tarifaMedia().add(recargo).setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -69,6 +87,14 @@ public class TarifaService {
      * @throws IllegalArgumentException si el peso o la distancia superan la capacidad máxima
      */
     public void validarCapacidad(BigDecimal pesoKg, BigDecimal kilometros) {
+        validarCapacidad(pesoKg, kilometros, valoresVigentes());
+    }
+
+    public void validarCapacidad(
+        BigDecimal pesoKg,
+        BigDecimal kilometros,
+        TarifaValores tarifa
+    ) {
         BigDecimal peso = valorNoNulo(pesoKg);
         BigDecimal distancia = valorNoNulo(kilometros);
 
@@ -77,9 +103,16 @@ public class TarifaService {
                 "El peso y los kilómetros no pueden ser negativos"
             );
         }
-        if (peso.compareTo(MAX_PESO_KG) > 0 || distancia.compareTo(MAX_KILOMETROS) > 0) {
-            throw new IllegalArgumentException(MENSAJE_CAPACIDAD_EXCEDIDA);
+        if (peso.compareTo(tarifa.maxPesoKg()) > 0
+            || distancia.compareTo(tarifa.maxKilometros()) > 0) {
+            throw new IllegalArgumentException(tarifa.mensajeCapacidad());
         }
+    }
+
+    private TarifaValores valoresVigentes() {
+        return tarifaConfigService == null
+            ? TarifaValores.POR_DEFECTO
+            : tarifaConfigService.obtenerValores();
     }
 
     private BigDecimal valorNoNulo(BigDecimal valor) {

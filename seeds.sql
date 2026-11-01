@@ -94,7 +94,7 @@ INSERT INTO pedidos (
 -- ============================================================
 INSERT INTO revisiones (id_revision, id_pedido, motivo_retencion, estado_resolucion) VALUES
   (1, 7, 'Dirección ambigua', 'PENDIENTE'),
-  (2, 8, 'Posible duplicado comercial', 'PENDIENTE');
+  (2, 8, 'Posible duplicado de local', 'PENDIENTE');
 
 -- ============================================================
 -- 5. Auditoría
@@ -109,7 +109,7 @@ INSERT INTO auditoria (id_auditoria, id_operario, id_pedido, actividad, tipo_eve
   (7, 2, 3, 'Alta de pedido #3 para María Elena Rodríguez', 'Alta', '2026-10-18 14:10:00'),
   (8, 1, 5, 'Pedido #5 entregado', 'Cambio de Estado', '2026-10-18 15:40:00'),
   (9, 2, 2, 'Alta de pedido #2 para Almacén Central S.R.L.', 'Alta', '2026-10-19 08:30:00'),
-  (10, 2, 8, 'Alta de pedido #8 retenido por Posible duplicado comercial', 'Alta', '2026-10-19 09:05:00'),
+  (10, 2, 8, 'Alta de pedido #8 retenido por Posible duplicado de local', 'Alta', '2026-10-19 09:05:00'),
   (11, 2, 2, 'Pedido #2 puesto en tránsito', 'Cambio de Estado', '2026-10-19 10:00:00'),
   (12, 2, 9, 'Alta de pedido #9 para Logística Norte S.A.', 'Alta', '2026-10-19 13:00:00'),
   (13, 1, 9, 'Pedido #9 cancelado en tránsito a pedido del cliente', 'Cambio de Estado', '2026-10-19 15:30:00'),
@@ -117,5 +117,26 @@ INSERT INTO auditoria (id_auditoria, id_operario, id_pedido, actividad, tipo_eve
   (15, 1, 1, 'Alta de pedido #1 para Juan Carlos González', 'Alta', '2026-10-20 09:15:00'),
   (16, 1, 3, 'Pedido #3 marcado como FALLIDO por Ausente; reprogramado con recargo del 50%', 'Cambio de Estado', '2026-10-20 18:20:00'),
   (17, 2, 4, 'Pedido #4 marcado como FALLIDO por Dirección Inexistente; reprogramado con recargo del 50%', 'Cambio de Estado', '2026-10-21 17:10:00');
+
+-- ============================================================
+-- 6. Configuración del tarifario
+-- Fila única con los valores por defecto del tarifario escalonado.
+-- ============================================================
+INSERT INTO tarifa_config (
+  id_tarifa,
+  tarifa_base,
+  tarifa_media,
+  recargo_por_km,
+  recargo_por_kg,
+  limite_peso_base,
+  limite_km_base,
+  limite_peso_medio,
+  limite_km_medio,
+  max_peso_kg,
+  max_kilometros,
+  id_operario_ultima_modificacion,
+  fecha_ultima_modificacion
+) VALUES
+  (1, 10000.00, 30000.00, 5000.00, 3000.00, 5.000, 5.000, 20.000, 15.000, 80.000, 30.000, NULL, NULL);
 
 COMMIT;

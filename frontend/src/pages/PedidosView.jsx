@@ -2,18 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import PedidoAccionesModal from '../components/pedidos/PedidoAccionesModal'
+import TarifaModal from '../components/tarifas/TarifaModal'
 import EmptyState from '../components/ui/EmptyState'
 import EstadoBadge from '../components/ui/EstadoBadge'
 import Icon from '../components/ui/Icon'
 import Pagination from '../components/ui/Pagination'
 import { ESTADOS_LISTA } from '../constants/estados'
+import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
 import { listarPedidos } from '../services/pedidoService'
 import { formatFechaHora, formatMoneda, formatPeso } from '../utils/formatters'
 
 const FILTROS = [{ value: 'TODOS', label: 'Todos' }, ...ESTADOS_LISTA]
 const VALORES_FILTRO = new Set(FILTROS.map((item) => item.value))
-const PAGE_SIZE = 10
+const PAGE_SIZE = 5
 
 function normalizarFiltro(valor) {
   const estado = typeof valor === 'string' ? valor.trim().toUpperCase() : ''
@@ -22,6 +24,7 @@ function normalizarFiltro(valor) {
 
 export default function PedidosView({ soloRevision = false }) {
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const filtroUrl = normalizarFiltro(searchParams.get('estado'))
   const [filtro, setFiltro] = useState(filtroUrl)
@@ -30,6 +33,7 @@ export default function PedidosView({ soloRevision = false }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null)
+  const [mostrarTarifas, setMostrarTarifas] = useState(false)
   const [pagina, setPagina] = useState(1)
 
   useEffect(() => {
@@ -111,14 +115,26 @@ export default function PedidosView({ soloRevision = false }) {
           <h2>{soloRevision ? 'Pedidos en revisión' : 'Pedidos'}</h2>
           <p>
             {soloRevision
-              ? 'Cargas retenidas por dirección ambigua o por posible duplicado comercial.'
+              ? 'Cargas retenidas por dirección ambigua o por posible duplicado de local.'
               : 'Todas las cargas registradas en MandáTodo, ordenadas por fecha.'}
           </p>
         </div>
-        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={cargar} disabled={loading}>
-          <Icon name="refresh" size={16} />
-          Actualizar
-        </button>
+        <div className="page-heading__acciones">
+          {!soloRevision && isAdmin && (
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => setMostrarTarifas(true)}
+            >
+              <Icon name="money" size={16} />
+              Tarifas
+            </button>
+          )}
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={cargar} disabled={loading}>
+            <Icon name="refresh" size={16} />
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {soloRevision && (
@@ -298,11 +314,12 @@ export default function PedidosView({ soloRevision = false }) {
         <PedidoAccionesModal
           key={pedidoSeleccionado.idPedido}
           pedido={pedidoSeleccionado}
-          soloRevision={soloRevision}
           onClose={() => setPedidoSeleccionado(null)}
           onUpdated={cargar}
         />
       )}
+
+      {mostrarTarifas && <TarifaModal onClose={() => setMostrarTarifas(false)} />}
     </div>
   )
 }

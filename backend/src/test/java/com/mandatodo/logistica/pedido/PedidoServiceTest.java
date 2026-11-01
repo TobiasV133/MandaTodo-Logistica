@@ -24,6 +24,7 @@ import com.mandatodo.logistica.pedido.dto.CrearPedidoRequest;
 import com.mandatodo.logistica.pedido.dto.CrearPedidoResponse;
 import com.mandatodo.logistica.pedido.dto.PedidoResponse;
 import com.mandatodo.logistica.pedido.dto.PedidoResponseFactory;
+import com.mandatodo.logistica.revision.AlertaRetencion;
 import com.mandatodo.logistica.revision.MotivoRetencion;
 import com.mandatodo.logistica.revision.MotorRetencion;
 import com.mandatodo.logistica.revision.Revision;
@@ -36,7 +37,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -120,8 +120,11 @@ class PedidoServiceTest {
     void creaPedidoEnRevisionCuandoLaAlturaEsCero() {
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(empresa));
         when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
-        when(pedidoRepository.findDelDia(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
-            .thenReturn(List.of());
+        when(pedidoRepository.existsByClienteIdAndFechaProgramadaAndEstadoNot(
+            eq(1L),
+            eq(LocalDate.of(2026, 10, 23)),
+            eq(EstadoPedido.CANCELADO_EN_TRANSITO)
+        )).thenReturn(false);
         when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
             Pedido pedido = invocacion.getArgument(0);
             ReflectionTestUtils.setField(pedido, "id", 10L);
@@ -163,8 +166,11 @@ class PedidoServiceTest {
     void creaPedidoPendienteCuandoLaDireccionEsCompletaYEsParticular() {
         when(clienteRepository.findById(2L)).thenReturn(Optional.of(particular));
         when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
-        when(pedidoRepository.findDelDia(eq(2L), any(LocalDateTime.class), any(LocalDateTime.class)))
-            .thenReturn(List.of());
+        when(pedidoRepository.existsByClienteIdAndFechaProgramadaAndEstadoNot(
+            eq(2L),
+            eq(LocalDate.of(2026, 10, 23)),
+            eq(EstadoPedido.CANCELADO_EN_TRANSITO)
+        )).thenReturn(false);
         when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
             Pedido pedido = invocacion.getArgument(0);
             ReflectionTestUtils.setField(pedido, "id", 11L);
@@ -193,12 +199,14 @@ class PedidoServiceTest {
     }
 
     @Test
-    void unaEmpresaConPedidoIdenticoElMismoDiaQuedaEnRevision() {
-        Pedido existente = pedidoExistente(empresa);
+    void unaEmpresaConUnPedidoDelMismoDiaQuedaEnRevisionPorPosibleDuplicadoDeLocal() {
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(empresa));
         when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
-        when(pedidoRepository.findDelDia(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
-            .thenReturn(List.of(existente));
+        when(pedidoRepository.existsByClienteIdAndFechaProgramadaAndEstadoNot(
+            eq(1L),
+            eq(LocalDate.of(2026, 10, 23)),
+            eq(EstadoPedido.CANCELADO_EN_TRANSITO)
+        )).thenReturn(true);
         when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
             Pedido pedido = invocacion.getArgument(0);
             ReflectionTestUtils.setField(pedido, "id", 12L);
@@ -215,22 +223,67 @@ class PedidoServiceTest {
 
         assertThat(response.retencion().retenido()).isTrue();
         assertThat(response.retencion().motivos())
-            .containsExactly(MotivoRetencion.POSIBLE_DUPLICADO_COMERCIAL);
+            .containsExactly(MotivoRetencion.POSIBLE_DUPLICADO_LOCAL);
+        assertThat(response.retencion().alertas())
+            .containsExactly(AlertaRetencion.DUPLICADO_LOCAL);
+
+        ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
+        verify(pedidoRepository).saveAndFlush(pedidoCaptor.capture());
+        assertThat(pedidoCaptor.getValue().getEstado()).isEqualTo(EstadoPedido.EN_REVISION);
 
         ArgumentCaptor<Revision> revisionCaptor = ArgumentCaptor.forClass(Revision.class);
         verify(revisionRepository).save(revisionCaptor.capture());
         assertThat(revisionCaptor.getValue().getMotivoRetencion())
-            .isEqualTo(MotivoRetencion.POSIBLE_DUPLICADO_COMERCIAL);
+            .isEqualTo(MotivoRetencion.POSIBLE_DUPLICADO_LOCAL);
+
+        verify(auditoriaService).registrar(
+            eq(operario),
+            any(Pedido.class),
+            contains("retenido por Posible duplicado de local"),
+            eq(TipoEvento.ALTA)
+        );
     }
 
     @Test
-    void unPedidoCanceladoNoBloqueaUnNuevoPedidoIdentico() {
-        Pedido existente = pedidoExistente(empresa);
-        existente.setEstado(EstadoPedido.CANCELADO_EN_TRANSITO);
+    void unParticularConUnPedidoDelMismoDiaSeGuardaPendiente() {
+        when(clienteRepository.findById(2L)).thenReturn(Optional.of(particular));
+        when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
+        when(pedidoRepository.existsByClienteIdAndFechaProgramadaAndEstadoNot(
+            eq(2L),
+            eq(LocalDate.of(2026, 10, 23)),
+            eq(EstadoPedido.CANCELADO_EN_TRANSITO)
+        )).thenReturn(true);
+        when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
+            Pedido pedido = invocacion.getArgument(0);
+            ReflectionTestUtils.setField(pedido, "id", 13L);
+            return pedido;
+        });
+        when(responseFactory.crear(any(Pedido.class), anyList()))
+            .thenReturn(mock(PedidoResponse.class));
+
+        CrearPedidoResponse response = pedidoService.crear(
+            request(2L, "Bv. Chacabuco", 900, "Córdoba")
+        );
+
+        assertThat(response.retencion().retenido()).isFalse();
+
+        ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
+        verify(pedidoRepository).saveAndFlush(pedidoCaptor.capture());
+        assertThat(pedidoCaptor.getValue().getEstado()).isEqualTo(EstadoPedido.PENDIENTE);
+        verify(revisionRepository, never()).save(any(Revision.class));
+    }
+
+    @Test
+    void unPedidoCanceladoDelMismoDiaNoBloqueaUnNuevoPedidoDelCliente() {
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(empresa));
         when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
-        when(pedidoRepository.findDelDia(eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
-            .thenReturn(List.of(existente));
+        Pedido existente = pedidoExistente(empresa);
+        existente.setEstado(EstadoPedido.CANCELADO_EN_TRANSITO);
+        when(pedidoRepository.existsByClienteIdAndFechaProgramadaAndEstadoNot(
+            eq(1L),
+            eq(LocalDate.of(2026, 10, 23)),
+            eq(EstadoPedido.CANCELADO_EN_TRANSITO)
+        )).thenReturn(false);
         when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
             Pedido pedido = invocacion.getArgument(0);
             ReflectionTestUtils.setField(pedido, "id", 13L);
@@ -244,6 +297,39 @@ class PedidoServiceTest {
         );
 
         assertThat(response.retencion().retenido()).isFalse();
+
+        ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
+        verify(pedidoRepository).saveAndFlush(pedidoCaptor.capture());
+        assertThat(pedidoCaptor.getValue().getEstado()).isEqualTo(EstadoPedido.PENDIENTE);
+        verify(revisionRepository, never()).save(any(Revision.class));
+    }
+
+    @Test
+    void unPedidoConFechaProgramadaSinDuplicadoSeGuardaPendiente() {
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(empresa));
+        when(operarioRepository.findById(1L)).thenReturn(Optional.of(operario));
+        when(pedidoRepository.existsByClienteIdAndFechaProgramadaAndEstadoNot(
+            eq(1L),
+            eq(LocalDate.of(2026, 10, 24)),
+            eq(EstadoPedido.CANCELADO_EN_TRANSITO)
+        )).thenReturn(false);
+        when(pedidoRepository.saveAndFlush(any(Pedido.class))).thenAnswer(invocacion -> {
+            Pedido pedido = invocacion.getArgument(0);
+            ReflectionTestUtils.setField(pedido, "id", 14L);
+            return pedido;
+        });
+        when(responseFactory.crear(any(Pedido.class), anyList()))
+            .thenReturn(mock(PedidoResponse.class));
+
+        CrearPedidoResponse response = pedidoService.crear(
+            request(1L, "Av. Corrientes", 1234, "CABA", LocalDate.of(2026, 10, 24))
+        );
+
+        assertThat(response.retencion().retenido()).isFalse();
+
+        ArgumentCaptor<Pedido> pedidoCaptor = ArgumentCaptor.forClass(Pedido.class);
+        verify(pedidoRepository).saveAndFlush(pedidoCaptor.capture());
+        assertThat(pedidoCaptor.getValue().getEstado()).isEqualTo(EstadoPedido.PENDIENTE);
         verify(revisionRepository, never()).save(any(Revision.class));
     }
 
@@ -259,6 +345,16 @@ class PedidoServiceTest {
     }
 
     private CrearPedidoRequest request(Long clienteId, String calle, int altura, String localidad) {
+        return request(clienteId, calle, altura, localidad, LocalDate.of(2026, 10, 23));
+    }
+
+    private CrearPedidoRequest request(
+        Long clienteId,
+        String calle,
+        int altura,
+        String localidad,
+        LocalDate fechaProgramada
+    ) {
         return new CrearPedidoRequest(
             operario.getId(),
             clienteId,
@@ -271,7 +367,7 @@ class PedidoServiceTest {
             localidad,
             null,
             null,
-            LocalDate.of(2026, 10, 23),
+            fechaProgramada,
             FiabilidadGeocodificacion.ALTA,
             null,
             null,

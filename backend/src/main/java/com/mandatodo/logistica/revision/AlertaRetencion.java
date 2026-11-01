@@ -13,7 +13,7 @@ public enum AlertaRetencion {
     GEO_AMBIGUA("geo_ambigua", MotivoRetencion.DIRECCION_AMBIGUA),
     FIABILIDAD_BAJA("fiabilidad_baja", MotivoRetencion.DIRECCION_AMBIGUA),
     FIABILIDAD_MEDIA("fiabilidad_media", MotivoRetencion.DIRECCION_AMBIGUA),
-    DUPLICADO_EMPRESA("duplicado_empresa", MotivoRetencion.POSIBLE_DUPLICADO_COMERCIAL);
+    DUPLICADO_LOCAL("duplicado_local", MotivoRetencion.POSIBLE_DUPLICADO_LOCAL);
 
     private final String codigo;
     private final MotivoRetencion motivo;

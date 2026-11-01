@@ -151,6 +151,7 @@ class RevisionServiceTest {
             1234,
             null,
             "CABA",
+            new BigDecimal("12500.00"),
             null,
             null
         );
@@ -161,6 +162,8 @@ class RevisionServiceTest {
         assertThat(pedido.getCalle()).isEqualTo("Av. Corrientes");
         assertThat(pedido.getAltura()).isEqualTo(1234);
         assertThat(pedido.getLocalidad()).isEqualTo("CABA");
+        assertThat(pedido.getMontoEnvio()).isEqualByComparingTo("12500.00");
+        assertThat(pedido.getPrecioTotal()).isEqualByComparingTo("12500.00");
         assertThat(revision.getEstadoResolucion()).isEqualTo(EstadoResolucion.APROBADO);
 
         verify(revisionRepository).saveAll(List.of(revision));
@@ -179,6 +182,7 @@ class RevisionServiceTest {
             1L,
             MotivoFalla.DIRECCION_INEXISTENTE,
             "Dirección validada como inexistente",
+            null,
             null,
             null,
             null,
@@ -206,6 +210,37 @@ class RevisionServiceTest {
             eq(pedido),
             contains("reprogramado para 2026-10-26"),
             eq(TipoEvento.CAMBIO_DE_ESTADO)
+        );
+    }
+
+    @Test
+    void rechazarRevisionPorDuplicadoRegistraElMotivoDeDuplicado() {
+        ResolverRevisionRequest request = new ResolverRevisionRequest(
+            AccionRevision.RECHAZAR,
+            1L,
+            MotivoFalla.PEDIDO_DUPLICADO,
+            "Pedido duplicado del mismo día para cliente Empresa",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
+
+        revisionService.resolver(7L, request);
+
+        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.FALLIDO);
+        assertThat(pedido.getMotivoFalla()).isEqualTo(MotivoFalla.PEDIDO_DUPLICADO);
+        assertThat(pedido.getMontoEnvio()).isEqualByComparingTo("15000.00");
+        assertThat(revision.getEstadoResolucion()).isEqualTo(EstadoResolucion.RECHAZADO);
+
+        verify(auditoriaService).registrar(
+            eq(operario),
+            eq(pedido),
+            contains("Revisión RECHAZADA"),
+            eq(TipoEvento.EDICION)
         );
     }
 }

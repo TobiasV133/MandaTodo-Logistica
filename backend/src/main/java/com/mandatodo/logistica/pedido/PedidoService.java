@@ -5,6 +5,7 @@ import com.mandatodo.logistica.auditoria.TipoEvento;
 import com.mandatodo.logistica.cliente.Cliente;
 import com.mandatodo.logistica.cliente.ClienteRepository;
 import com.mandatodo.logistica.cliente.ClienteService;
+import com.mandatodo.logistica.cliente.TipoCliente;
 import com.mandatodo.logistica.cliente.dto.ClienteRequest;
 import com.mandatodo.logistica.operario.Operario;
 import com.mandatodo.logistica.operario.OperarioRepository;
@@ -15,6 +16,7 @@ import com.mandatodo.logistica.pedido.dto.CrearPedidoResponse;
 import com.mandatodo.logistica.pedido.dto.PedidoResponse;
 import com.mandatodo.logistica.pedido.dto.PedidoResponseFactory;
 import com.mandatodo.logistica.pedido.dto.ResumenPedidosResponse;
+import com.mandatodo.logistica.revision.AlertaRetencion;
 import com.mandatodo.logistica.revision.EvaluacionRetencion;
 import com.mandatodo.logistica.revision.MotivoRetencion;
 import com.mandatodo.logistica.revision.MotorRetencion;
@@ -149,9 +151,6 @@ public class PedidoService {
         FiabilidadGeocodificacion fiabilidad = resolverFiabilidad(request);
 
         LocalDate hoy = LocalDate.now(clock);
-        LocalDateTime desde = hoy.atStartOfDay();
-        LocalDateTime hasta = hoy.plusDays(1).atStartOfDay();
-        List<Pedido> pedidosDelDia = pedidoRepository.findDelDia(cliente.getId(), desde, hasta);
 
         LocalDateTime fechaCreacion = LocalDateTime.now(clock);
 
@@ -189,25 +188,34 @@ public class PedidoService {
         }
 
         EvaluacionRetencion evaluacion = new EvaluacionRetencion(
-            cliente.getTipoCliente(),
             PedidoEvaluable.desde(pedido),
-            pedidosDelDia.stream()
-                .filter(candidato -> candidato.getEstado() != EstadoPedido.CANCELADO_EN_TRANSITO)
-                .map(PedidoEvaluable::desde)
-                .toList(),
             fiabilidad
         );
 
-        ResultadoRetencion resultado = motorRetencion.evaluar(evaluacion);
-        pedido.setEstado(resultado.retenido() ? EstadoPedido.EN_REVISION : EstadoPedido.PENDIENTE);
+        ResultadoRetencion direccion = motorRetencion.evaluar(evaluacion);
+        pedido.setEstado(direccion.retenido() ? EstadoPedido.EN_REVISION : EstadoPedido.PENDIENTE);
 
-        Pedido guardado = pedidoRepository.saveAndFlush(pedido);
+        boolean duplicado = existePedidoParaFecha(cliente.getId(), fechaProgramada);
+        Pedido guardado = validarYGuardarPedido(pedido);
+
+        boolean retenidoPorDuplicado = duplicado
+            && cliente.getTipoCliente() == TipoCliente.Empresa;
+
+        List<MotivoRetencion> motivos = new ArrayList<>(direccion.motivos());
+        List<AlertaRetencion> alertas = new ArrayList<>(direccion.alertas());
+        if (retenidoPorDuplicado) {
+            motivos.add(MotivoRetencion.POSIBLE_DUPLICADO_LOCAL);
+            alertas.add(AlertaRetencion.DUPLICADO_LOCAL);
+        }
+        ResultadoRetencion resultado = new ResultadoRetencion(
+            !motivos.isEmpty(),
+            motivos,
+            alertas
+        );
+
         List<Revision> revisiones = new ArrayList<>();
-
-        if (resultado.retenido()) {
-            for (MotivoRetencion motivo : resultado.motivos()) {
-                revisiones.add(revisionRepository.save(new Revision(guardado, motivo)));
-            }
+        for (MotivoRetencion motivo : motivos) {
+            revisiones.add(revisionRepository.save(new Revision(guardado, motivo)));
         }
 
         String actividad = "Alta de pedido #%d para %s"
@@ -230,6 +238,52 @@ public class PedidoService {
         );
 
         return new CrearPedidoResponse(responseFactory.crear(guardado, revisiones), resultado);
+    }
+
+    /**
+     * Valida el pedido nuevo contra los posibles duplicados (mismo cliente y
+     * misma fecha programada) y lo persiste.
+     *
+     * <p>Flujo estricto:
+     * <ul>
+     *   <li>Si el cliente ya tiene un pedido para la misma fecha programada y su
+     *       {@code tipoCliente} es {@code Empresa}, el pedido no se rechaza: se guarda
+     *       en {@code EN_REVISION} con el motivo "Posible duplicado de local".</li>
+     *   <li>Si el cliente es {@code Particular}, el duplicado se permite y el
+     *       pedido se guarda normalmente en {@code PENDIENTE}.</li>
+     *   <li>Si no hay duplicados previos, se guarda normalmente.</li>
+     * </ul>
+     */
+    @Transactional
+    public Pedido validarYGuardarPedido(Pedido nuevoPedido) {
+        if (nuevoPedido == null) {
+            throw new ReglaNegocioException("El pedido a guardar es obligatorio.");
+        }
+        Cliente cliente = nuevoPedido.getCliente();
+        if (cliente == null || cliente.getId() == null) {
+            throw new ReglaNegocioException("El pedido debe tener un cliente registrado.");
+        }
+
+        boolean duplicado = existePedidoParaFecha(
+            cliente.getId(),
+            nuevoPedido.getFechaProgramada()
+        );
+
+        if (duplicado && cliente.getTipoCliente() == TipoCliente.Empresa) {
+            nuevoPedido.setEstado(EstadoPedido.EN_REVISION);
+        } else if (nuevoPedido.getEstado() == null) {
+            nuevoPedido.setEstado(EstadoPedido.PENDIENTE);
+        }
+
+        return pedidoRepository.saveAndFlush(nuevoPedido);
+    }
+
+    private boolean existePedidoParaFecha(Long clienteId, LocalDate fechaProgramada) {
+        return pedidoRepository.existsByClienteIdAndFechaProgramadaAndEstadoNot(
+            clienteId,
+            fechaProgramada,
+            EstadoPedido.CANCELADO_EN_TRANSITO
+        );
     }
 
     private String generarCodigoFallback(LocalDate fecha) {

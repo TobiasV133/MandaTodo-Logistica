@@ -4,6 +4,7 @@ import com.mandatodo.logistica.pedido.MotivoFalla;
 import com.mandatodo.logistica.revision.AccionRevision;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -32,6 +33,11 @@ public record ResolverRevisionRequest(
 
     @Size(max = 150, message = "no puede superar los 150 caracteres")
     String localidad,
+
+    // Solo se aplica al aprobar la revisión: permite corregir el importe del envío.
+    @DecimalMin(value = "0.0", message = "no puede ser negativo")
+    @Digits(integer = 8, fraction = 2, message = "admite hasta 8 enteros y 2 decimales")
+    BigDecimal montoEnvio,
 
     @DecimalMin(value = "-90.0", message = "debe estar entre -90 y 90")
     @DecimalMax(value = "90.0", message = "debe estar entre -90 y 90")

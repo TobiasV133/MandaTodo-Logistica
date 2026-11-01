@@ -6,7 +6,7 @@ import com.mandatodo.logistica.shared.texto.TextoNormalizador;
 
 public enum MotivoRetencion {
     DIRECCION_AMBIGUA("Dirección ambigua"),
-    POSIBLE_DUPLICADO_COMERCIAL("Posible duplicado comercial");
+    POSIBLE_DUPLICADO_LOCAL("Posible duplicado de local");
 
     private final String valor;
 

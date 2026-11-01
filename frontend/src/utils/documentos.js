@@ -1,3 +1,5 @@
+export const LONGITUD_MAXIMA_DOCUMENTO = 11
+
 export const TIPOS_DOCUMENTO = [
   { value: 'DNI', label: 'DNI' },
   { value: 'CUIT', label: 'CUIT' },
@@ -20,6 +22,16 @@ export function documentoCompleto(tipoDocumento, numeroDocumento) {
   const digitos = soloDigitos(numeroDocumento)
   if (tipoDocumento === 'CUIT') return digitos.length === 11
   return digitos.length === 7 || digitos.length === 8
+}
+
+/**
+ * Resuelve el tipo de documento mientras se escribe sin pisar la selección
+ * del usuario: nunca degrada un CUIT a DNI (eso truncaba el número a 8 dígitos
+ * mientras se tipeaba) y solo promueve a CUIT cuando se completan los 11 dígitos.
+ */
+export function tipoDocumentoAlEscribir(tipoActual, numeroDocumento) {
+  if (tipoActual === 'CUIT') return 'CUIT'
+  return soloDigitos(numeroDocumento).length === 11 ? 'CUIT' : tipoActual || 'DNI'
 }
 
 export function validarDocumento(tipoDocumento, numeroDocumento) {

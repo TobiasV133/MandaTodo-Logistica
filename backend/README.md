@@ -12,7 +12,7 @@ Todos los endpoints requieren `Authorization: Bearer <token>` salvo `POST /api/a
 
 | Endpoint | Descripción |
 | --- | --- |
-| `POST /api/auth/login` | Login por email y contraseña (BCrypt). Devuelve el JWT y los datos del operario. |
+| `POST /api/auth/login` | Login por usuario (o email) y contraseña (BCrypt). Devuelve el JWT y los datos del operario. |
 | `GET /api/auth/me` | Devuelve el operario autenticado a partir del JWT. |
 | `POST /api/geo/normalizar` | Normaliza y geocodifica una dirección con OpenStreetMap/Nominatim. |
 | `GET /api/clientes` | Lista los clientes ordenados por razón social. |
@@ -48,8 +48,11 @@ mysql --default-character-set=utf8mb4 -u root -p < schema.sql
 mysql --default-character-set=utf8mb4 -u root -p < seeds.sql
 
 cd backend
-DB_USERNAME=root DB_PASSWORD=tu_clave JWT_SECRET=una_clave_larga ./mvnw spring-boot:run
+./mvnw spring-boot:run
 ```
+
+Por defecto el backend usa `localhost:3306`, usuario `root` y **sin contraseña**. Si tu MySQL
+tiene clave, exportá `DB_PASSWORD` antes de arrancarlo.
 
 En PowerShell la redirección `<` no funciona directamente. Usá `cmd /c` para conservar la
 codificación UTF-8 del esquema y de los seeds:
@@ -66,9 +69,6 @@ En PowerShell, el wrapper no requiere Maven instalado:
 
 ```powershell
 cd backend
-$env:DB_USERNAME = "root"
-$env:DB_PASSWORD = "tu_clave"
-$env:JWT_SECRET = "una_clave_larga_para_desarrollo"
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -210,31 +210,32 @@ El pedido pasa a `EN_REVISION` y se crea un registro en `revisiones` cuando:
 
 La fiabilidad es opcional en el request. Si no se envía, solo se evalúa la estructura de la dirección.
 
-### 2. Posible duplicado comercial → `Posible duplicado comercial`
+### 2. Posible duplicado local → `Posible duplicado de local`
 
-Solo aplica a clientes con `tipoCliente = Empresa`. Se compara el pedido nuevo contra los pedidos
-del mismo cliente creados **el mismo día** y con la misma firma:
+Solo aplica a clientes con `tipoCliente = Empresa`. Se busca si el cliente ya tiene un pedido
+registrado para la **misma fecha programada** (mismo cliente y misma `fecha_programada`, asumiendo
+que es el mismo destino; `PedidoRepository#existsByClienteIdAndFechaProgramadaAndEstadoNot`).
 
-- descripción,
-- peso,
-- monto de envío,
-- calle,
-- altura,
-- piso/depto,
-- localidad.
+Si existe un pedido anterior no cancelado de ese cliente con la misma fecha programada, se retiene:
 
-La comparación normaliza mayúsculas, acentos, espacios y signos. Se excluyen los pedidos
-`CANCELADO_EN_TRANSITO` porque una cancelación explícita no debe bloquear un nuevo pedido. Los
-clientes `Particular` nunca se retienen por duplicado.
+- `PENDIENTE` y sin duplicados → el pedido se guarda en `PENDIENTE`.
+- `Empresa` con duplicado de fecha programada → el pedido se guarda en `EN_REVISION` con el motivo
+  `Posible duplicado de local`.
 
-Si se cumplen ambas reglas, se persisten dos filas en `revisiones` y el pedido se muestra una sola vez
-en la bandeja, con los dos motivos.
+Si la fecha programada difiere, no se considera duplicado y el pedido se guarda con la lógica normal
+(`PENDIENTE`).
+
+Los clientes `Particular` nunca se retienen por duplicado: el duplicado se permite y el pedido se
+guarda en `PENDIENTE`.
+
+Si se retiene por esta regla, se persiste un registro en `revisiones` con el motivo indicado. Si se
+retiene también por la regla de dirección ambigua, se acumulan ambos motivos.
 
 ## Reglas de entrega fallida
 
 Al hacer `PATCH /api/pedidos/{id}/estado` con `estado = FALLIDO`:
 
-1. Se exige `motivoFalla` (`Ausente`, `Dirección Inexistente` o `Dirección Incompleta`).
+1. Se exige `motivoFalla` (`Ausente`, `Dirección Inexistente`, `Dirección Incompleta` o `Pedido Duplicado`).
 2. Se aplica un recargo del **50%** sobre el `montoEnvio` vigente.
 3. El monto final se guarda en `pedidos.monto_envio` (igual que en `seeds.sql`).
 4. Se reprograma `fecha_programada` para el **siguiente día hábil**.
@@ -442,6 +443,9 @@ Respuesta abreviada:
 `RECHAZAR` marca el pedido como `FALLIDO` y aplica la misma lógica de reprogramación y recargo. Si no
 se informa `motivoFalla`, se usa `Dirección Inexistente`, que es el motivo que utiliza el prototipo al
 rechazar una revisión.
+
+Los motivos de rechazo disponibles incluyen `Ausente`, `Dirección Inexistente`, `Dirección Incompleta`
+y `Pedido Duplicado` (usado al rechazar por un posible duplicado de local detectado en el alta).
 
 ## Decisiones de implementación
 

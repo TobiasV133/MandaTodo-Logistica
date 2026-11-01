@@ -23,8 +23,8 @@ configurado en `vite.config.js`.
 > **VS Code:** si usás **Run and Debug**, elegí la configuración **Frontend: Vite** (o
 > **Full stack: backend + frontend**). El puerto `8080` es la API Spring Boot, no la aplicación:
 > abrir `http://localhost:8080` en el navegador muestra una respuesta JSON del backend, no la
-> interfaz. La configuración del backend pide `DB_PASSWORD` al iniciar; dejala vacía si tu MySQL
-> no tiene contraseña. **Frontend: Vite** abre automáticamente `http://localhost:5173` en el
+> interfaz. El backend usa por defecto `root` sin contraseña; si tu MySQL tiene clave, definí
+> `DB_PASSWORD` antes de arrancarlo. **Frontend: Vite** abre automáticamente `http://localhost:5173` en el
 > navegador.
 
 Usuarios de prueba de `seeds.sql`:
@@ -51,7 +51,7 @@ del frontend a `CORS_ALLOWED_ORIGINS` en el backend. El JWT se guarda en `localS
 
 ## Funcionalidad integrada
 
-- Login por email contra `POST /api/auth/login`; el token se adjunta automáticamente a cada request.
+- Login por usuario (o email) contra `POST /api/auth/login`; el token se adjunta automáticamente a cada request.
 - Dashboard con `GET /api/pedidos/resumen`.
 - Alta de pedidos en cuatro pasos, búsqueda de cliente por DNI/CUIT, normalización de dirección y
   predicción de retención antes de confirmar.

@@ -1,57 +1,93 @@
 /**
  * Tarifario escalonado replicado desde TarifaService (backend).
- * Si cambian los valores, se deben actualizar ambos lados.
  *
- * Nivel 1: hasta 5 kg y 5 km -> $10.000.
- * Nivel 2: supera 5 kg o 5 km, sin superar 20 kg ni 15 km -> $30.000.
- * Nivel 3: más de 20 kg o más de 15 km -> $30.000 + $5.000 por km extra
- *          + $3.000 por kg extra.
+ * Los valores por defecto coinciden con TarifaValores.POR_DEFECTO. Los valores
+ * vigentes se obtienen de GET /api/tarifas y los administradores pueden editarlos
+ * desde la pantalla de pedidos.
+ *
+ * Nivel 1: hasta limitePesoBase kg y limiteKmBase km -> tarifaBase.
+ * Nivel 2: hasta limitePesoMedio kg y limiteKmMedio km -> tarifaMedia.
+ * Nivel 3: supera el nivel medio -> tarifaMedia + recargoPorKm por km extra
+ *          + recargoPorKg por kg extra.
  */
-export const TARIFA_BASE = 10000
-export const TARIFA_MEDIA = 30000
-export const RECARGO_POR_KM = 5000
-export const RECARGO_POR_KG = 3000
-export const MAX_PESO_KG = 80
-export const MAX_KILOMETROS = 30
-export const MENSAJE_CAPACIDAD =
-  'El pedido excede la capacidad logística máxima (80kg / 30km)'
+export const TARIFA_POR_DEFECTO = Object.freeze({
+  tarifaBase: 10000,
+  tarifaMedia: 30000,
+  recargoPorKm: 5000,
+  recargoPorKg: 3000,
+  limitePesoBase: 5,
+  limiteKmBase: 5,
+  limitePesoMedio: 20,
+  limiteKmMedio: 15,
+  maxPesoKg: 80,
+  maxKilometros: 30,
+})
 
-const LIMITE_PESO_BASE = 5
-const LIMITE_KM_BASE = 5
-const LIMITE_PESO_MEDIO = 20
-const LIMITE_KM_MEDIO = 15
+const CAMPOS = Object.keys(TARIFA_POR_DEFECTO)
 
-export function calcularTarifa(pesoKg, kilometros) {
+/**
+ * Toma los valores que llegan de la API (o de un objeto parcial) y completa con
+ * los valores por defecto. Descarta números inválidos o negativos.
+ */
+export function normalizarTarifa(valores) {
+  const resultado = { ...TARIFA_POR_DEFECTO }
+  if (!valores || typeof valores !== 'object') return resultado
+
+  CAMPOS.forEach((campo) => {
+    const numero = Number(valores[campo])
+    if (Number.isFinite(numero) && numero >= 0) {
+      resultado[campo] = numero
+    }
+  })
+
+  return resultado
+}
+
+export function calcularTarifa(pesoKg, kilometros, tarifa = TARIFA_POR_DEFECTO) {
+  const config = normalizarTarifa(tarifa)
   const peso = numero(pesoKg)
   const km = numero(kilometros)
 
-  validarCapacidad(peso, km)
+  validarCapacidad(peso, km, config)
 
-  if (peso <= LIMITE_PESO_BASE && km <= LIMITE_KM_BASE) {
-    return resultado(TARIFA_BASE, 0)
+  if (peso <= config.limitePesoBase && km <= config.limiteKmBase) {
+    return resultado(config.tarifaBase, 0)
   }
 
-  if (peso <= LIMITE_PESO_MEDIO && km <= LIMITE_KM_MEDIO) {
-    return resultado(TARIFA_MEDIA, 0)
+  if (peso <= config.limitePesoMedio && km <= config.limiteKmMedio) {
+    return resultado(config.tarifaMedia, 0)
   }
 
-  const kilometrosExtra = Math.max(km - LIMITE_KM_MEDIO, 0)
-  const pesoExtra = Math.max(peso - LIMITE_PESO_MEDIO, 0)
-  const recargo = kilometrosExtra * RECARGO_POR_KM + pesoExtra * RECARGO_POR_KG
+  const kilometrosExtra = Math.max(km - config.limiteKmMedio, 0)
+  const pesoExtra = Math.max(peso - config.limitePesoMedio, 0)
+  const recargo =
+    kilometrosExtra * config.recargoPorKm + pesoExtra * config.recargoPorKg
 
-  return resultado(TARIFA_MEDIA, recargo)
+  return resultado(config.tarifaMedia, recargo)
 }
 
-export function validarCapacidad(pesoKg, kilometros) {
+export function validarCapacidad(pesoKg, kilometros, tarifa = TARIFA_POR_DEFECTO) {
+  const config = normalizarTarifa(tarifa)
   const peso = numero(pesoKg)
   const km = numero(kilometros)
 
   if (peso < 0 || km < 0) {
     throw new Error('El peso y los kilómetros no pueden ser negativos')
   }
-  if (peso > MAX_PESO_KG || km > MAX_KILOMETROS) {
-    throw new Error(MENSAJE_CAPACIDAD)
+  if (peso > config.maxPesoKg || km > config.maxKilometros) {
+    throw new Error(mensajeCapacidad(config))
   }
+}
+
+export function mensajeCapacidad(tarifa = TARIFA_POR_DEFECTO) {
+  const config = normalizarTarifa(tarifa)
+  return `El pedido excede la capacidad logística máxima (${formatearNumero(
+    config.maxPesoKg,
+  )}kg / ${formatearNumero(config.maxKilometros)}km)`
+}
+
+function formatearNumero(valor) {
+  return String(valor)
 }
 
 function numero(valor) {
