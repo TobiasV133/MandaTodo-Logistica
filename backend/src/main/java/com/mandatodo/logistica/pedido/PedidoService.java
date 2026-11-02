@@ -11,6 +11,7 @@ import com.mandatodo.logistica.operario.Operario;
 import com.mandatodo.logistica.operario.OperarioRepository;
 import com.mandatodo.logistica.pedido.dto.CambiarEstadoRequest;
 import com.mandatodo.logistica.pedido.dto.CambioEstadoResponse;
+import com.mandatodo.logistica.pedido.dto.CancelarTransitoRequest;
 import com.mandatodo.logistica.pedido.dto.CrearPedidoRequest;
 import com.mandatodo.logistica.pedido.dto.CrearPedidoResponse;
 import com.mandatodo.logistica.pedido.dto.PedidoResponse;
@@ -439,6 +440,36 @@ public class PedidoService {
             false,
             null,
             null
+        );
+    }
+
+    /**
+     * Endpoint dedicado del spec (§4.4): solo admite pedidos EN_TRANSITO y
+     * reutiliza el cambio de estado para registrar la auditoría y el motivo.
+     */
+    @Transactional
+    public CambioEstadoResponse cancelarTransito(
+        Long id,
+        CancelarTransitoRequest request,
+        Long operarioId
+    ) {
+        Pedido pedido = buscarPedido(id);
+        if (pedido.getEstado() != EstadoPedido.EN_TRANSITO) {
+            throw new ReglaNegocioException(
+                "Solo se puede cancelar en tránsito un pedido en estado EN_TRANSITO"
+                    + " (estado actual: " + pedido.getEstado() + ")."
+            );
+        }
+        return cambiarEstado(
+            id,
+            new CambiarEstadoRequest(
+                EstadoPedido.CANCELADO_EN_TRANSITO,
+                null,
+                null,
+                request.motivoCancelacion().trim(),
+                operarioId
+            ),
+            operarioId
         );
     }
 

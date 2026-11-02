@@ -8,10 +8,12 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -99,6 +101,38 @@ public class ManejadorGlobalExcepciones {
             "No se pudo guardar la operación por una restricción de integridad de datos.",
             request
         );
+    }
+
+    /**
+     * Una consulta que espera un único registro encontró duplicados. Ocurre,
+     * por ejemplo, al buscar un documento repetido en datos históricos: es un
+     * conflicto de negocio, no un error interno.
+     */
+    @ExceptionHandler(IncorrectResultSizeDataAccessException.class)
+    public ResponseEntity<ErrorResponse> resultadosDuplicados(
+        IncorrectResultSizeDataAccessException excepcion,
+        HttpServletRequest request
+    ) {
+        log.warn("Consulta con múltiples resultados en {}", request.getRequestURI(), excepcion);
+        return respuesta(
+            HttpStatus.CONFLICT,
+            "Se encontraron registros duplicados para la consulta solicitada.",
+            request
+        );
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> metodoNoSoportado(
+        HttpRequestMethodNotSupportedException excepcion,
+        HttpServletRequest request
+    ) {
+        String soportados = excepcion.getSupportedHttpMethods() == null
+            ? ""
+            : excepcion.getSupportedHttpMethods().toString();
+        String mensaje = "El método " + excepcion.getMethod()
+            + " no está soportado para " + request.getRequestURI() + "."
+            + (soportados.isBlank() ? "" : " Métodos permitidos: " + soportados + ".");
+        return respuesta(HttpStatus.METHOD_NOT_ALLOWED, mensaje, request);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

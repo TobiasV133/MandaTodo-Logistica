@@ -22,6 +22,11 @@ export async function cambiarEstado(idPedido, payload) {
   return data
 }
 
+export async function cancelarTransito(idPedido, payload) {
+  const { data } = await api.post(`/pedidos/${idPedido}/cancelar-transito`, payload)
+  return data
+}
+
 export async function resolverRevision(idPedido, payload) {
   const { data } = await api.put(`/pedidos/${idPedido}/revision`, payload)
   return data

@@ -483,6 +483,175 @@ class ApiIntegracionTest {
             ));
     }
 
+    @Test
+    void rechazaUnDocumentoDuplicadoAunqueVengaSinGuiones() throws Exception {
+        mvc.perform(post("/api/clientes")
+                .requestAttr(JwtAuthInterceptor.ATTR_ID_OPERARIO, operario.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tipoDocumento": "CUIT",
+                      "numeroDocumento": "30712345678",
+                      "nombreRazonSocial": "Duplicado S.A.",
+                      "telefono": "11 4000-0000",
+                      "email": "duplicado@example.com",
+                      "tipoCliente": "Empresa",
+                      "esFrecuente": false
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value(
+                "Ya existe un cliente con el documento 30712345678."
+            ));
+
+        assertThat(clienteRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    void registraUnEventoDeAuditoriaPorPost() throws Exception {
+        mvc.perform(post("/api/auditoria")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "idOperario": %d,
+                      "idPedido": %d,
+                      "actividad": "Evento manual de prueba",
+                      "tipoEvento": "CAMBIO_ESTADO"
+                    }
+                    """.formatted(operario.getId(), pedido.getId())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.actividad").value("Evento manual de prueba"))
+            .andExpect(jsonPath("$.tipoEvento").value("Cambio de Estado"))
+            .andExpect(jsonPath("$.idOperario").value(operario.getId()))
+            .andExpect(jsonPath("$.idPedido").value(pedido.getId()));
+    }
+
+    @Test
+    void filtraLaAuditoriaPorOperarioTipoYFecha() throws Exception {
+        registrarEvento("Evento ALTA de prueba", "ALTA");
+        registrarEvento("Evento de edición de prueba", "EDICION");
+
+        mvc.perform(get("/api/auditoria").param("operario", operario.getId().toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
+
+        mvc.perform(get("/api/auditoria").param("tipoEvento", "ALTA"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(1)))
+            .andExpect(jsonPath("$[0].tipoEvento").value("Alta"));
+
+        mvc.perform(get("/api/auditoria").param("tipoEvento", "Cambio de Estado"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(0)));
+
+        mvc.perform(get("/api/auditoria").param("fecha", LocalDate.now().toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
+
+        mvc.perform(get("/api/auditoria")
+                .param("desde", LocalDate.now().minusDays(1).toString())
+                .param("hasta", LocalDate.now().toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)));
+
+        mvc.perform(get("/api/auditoria")
+                .param("desde", LocalDate.now().plusDays(1).toString())
+                .param("hasta", LocalDate.now().toString()))
+            .andExpect(status().isBadRequest());
+
+        mvc.perform(get("/api/auditoria").param("fecha", "no-es-fecha"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void responde405CuandoElMetodoNoEstaSoportadoEnAuditoria() throws Exception {
+        mvc.perform(put("/api/auditoria")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isMethodNotAllowed())
+            .andExpect(jsonPath("$.status").value(405));
+    }
+
+    @Test
+    void cancelaEnTransitoUnPedidoConMotivo() throws Exception {
+        pasarAEnTransito();
+
+        mvc.perform(post("/api/pedidos/{id}/cancelar-transito", pedido.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "motivoCancelacion": "El cliente canceló el envío",
+                      "operarioId": %d
+                    }
+                    """.formatted(operario.getId())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.pedido.estado").value("CANCELADO_EN_TRANSITO"))
+            .andExpect(jsonPath("$.pedido.motivoCancelacion").value(
+                "El cliente canceló el envío"
+            ));
+
+        assertThat(auditoriaRepository.findAllByOrderByFechaHoraDesc())
+            .anyMatch(evento -> evento.getActividad()
+                .contains("motivo: El cliente canceló el envío"));
+    }
+
+    @Test
+    void noCancelaEnTransitoUnPedidoQueNoEstaEnTransito() throws Exception {
+        mvc.perform(post("/api/pedidos/{id}/cancelar-transito", pedido.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "motivoCancelacion": "El cliente canceló el envío",
+                      "operarioId": %d
+                    }
+                    """.formatted(operario.getId())))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value(
+                org.hamcrest.Matchers.containsString("EN_TRANSITO")
+            ));
+    }
+
+    @Test
+    void exigeMotivoParaCancelarEnTransito() throws Exception {
+        pasarAEnTransito();
+
+        mvc.perform(post("/api/pedidos/{id}/cancelar-transito", pedido.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "motivoCancelacion": "   ",
+                      "operarioId": %d
+                    }
+                    """.formatted(operario.getId())))
+            .andExpect(status().isBadRequest());
+    }
+
+    private void registrarEvento(String actividad, String tipoEvento) throws Exception {
+        mvc.perform(post("/api/auditoria")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "idOperario": %d,
+                      "idPedido": %d,
+                      "actividad": "%s",
+                      "tipoEvento": "%s"
+                    }
+                    """.formatted(operario.getId(), pedido.getId(), actividad, tipoEvento)))
+            .andExpect(status().isCreated());
+    }
+
+    private void pasarAEnTransito() throws Exception {
+        mvc.perform(patch("/api/pedidos/{id}/estado", pedido.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "estado": "EN_TRANSITO",
+                      "operarioId": %d
+                    }
+                    """.formatted(operario.getId())))
+            .andExpect(status().isOk());
+    }
+
     private String extraerTexto(byte[] pdf) throws IOException {
         PdfReader lector = new PdfReader(pdf);
         try {

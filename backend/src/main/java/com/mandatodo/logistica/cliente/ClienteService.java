@@ -87,7 +87,7 @@ public class ClienteService {
 
         String email = dto.email().trim().toLowerCase(Locale.ROOT);
 
-        if (clienteRepository.existsByNumeroDocumento(documento)) {
+        if (clienteRepository.countByDocumentoNormalizado(documento) > 0) {
             throw new ReglaNegocioException(
                 "Ya existe un cliente con el documento " + documento + "."
             );

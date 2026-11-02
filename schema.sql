@@ -31,6 +31,9 @@ CREATE TABLE clientes (
   fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_cliente),
   UNIQUE KEY uk_clientes_numero_documento (numero_documento),
+  -- Unicidad real del documento: 30-71234567-8 y 30712345678 son el mismo CUIT.
+  UNIQUE KEY uk_clientes_documento_normalizado
+    ((REPLACE(REPLACE(REPLACE(numero_documento, '-', ''), '.', ''), ' ', ''))),
   UNIQUE KEY uk_clientes_email (email),
   KEY idx_clientes_tipo_cliente (tipo_cliente),
   KEY idx_clientes_nombre_razon_social (nombre_razon_social)
