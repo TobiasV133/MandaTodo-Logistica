@@ -133,7 +133,6 @@ export default function OperariosPage() {
       <div className="page-heading">
         <div>
           <span className="page-eyebrow">Seguridad</span>
-          <h2>Gestión de operarios</h2>
           <p>Altas, edición de roles y control de acceso al sistema.</p>
         </div>
         <div className="d-flex gap-2">
