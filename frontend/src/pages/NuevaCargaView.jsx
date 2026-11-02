@@ -13,6 +13,7 @@ import { getApiErrorMessage } from '../services/api'
 import { buscarPorDocumento } from '../services/clienteService'
 import { normalizarDireccion } from '../services/geoService'
 import { crearPedido, imprimirRemito } from '../services/pedidoService'
+import { normalizarDireccionIngresada } from '../utils/addressParser'
 import {
   documentoCompleto,
   formatearDocumento,
@@ -57,6 +58,12 @@ const DETALLE_INICIAL = {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+function construirClaveDireccion(direccion) {
+  return `${direccion.calle.trim().toLowerCase()}|${direccion.altura.trim()}|${direccion.localidad
+    .trim()
+    .toLowerCase()}`
+}
+
 function StepHeader({ number, title, description }) {
   return (
     <div className="step-heading">
@@ -87,6 +94,7 @@ export default function NuevaCargaView() {
   const [pinAjustado, setPinAjustado] = useState(null)
   const [validandoGeo, setValidandoGeo] = useState(false)
   const [errorGeo, setErrorGeo] = useState('')
+  const [avisoDireccion, setAvisoDireccion] = useState('')
 
   const [detalle, setDetalle] = useState(DETALLE_INICIAL)
   const [errores, setErrores] = useState({})
@@ -106,9 +114,7 @@ export default function NuevaCargaView() {
     )
   }, [])
 
-  const claveDireccion = `${direccion.calle.trim().toLowerCase()}|${direccion.altura.trim()}|${direccion.localidad
-    .trim()
-    .toLowerCase()}`
+  const claveDireccion = construirClaveDireccion(direccion)
   const direccionValidada = geo !== null && claveValidada === claveDireccion
 
   const alturaTexto = direccion.altura.trim().toLowerCase()
@@ -266,6 +272,20 @@ export default function NuevaCargaView() {
     const { name, value } = event.target
     setDireccion((prev) => ({ ...prev, [name]: value }))
     setErrorGeo('')
+    setAvisoDireccion('')
+  }
+
+  /**
+   * Se dispara al desenfocar Calle o Altura. El parser separa la dirección
+   * completa y traduce alturas escritas con palabras, pero nunca pisa la
+   * altura, la localidad ni el piso/depto que el operario ya cargó.
+   */
+  const normalizarCamposDireccion = () => {
+    const { direccion: normalizada, cambios } = normalizarDireccionIngresada(direccion)
+    if (cambios.length === 0) return
+
+    setDireccion(normalizada)
+    setAvisoDireccion(`Normalizamos la dirección: ${cambios.join('; ')}.`)
   }
 
   const cambiarDetalle = (event) => {
@@ -343,8 +363,16 @@ export default function NuevaCargaView() {
   }
 
   const validarDireccion = async () => {
-    const calle = direccion.calle.trim()
-    const localidad = direccion.localidad.trim()
+    // Normalizamos antes de consultar a Nominatim: así validamos exactamente
+    // la dirección que se va a persistir y la clave coincide con el estado.
+    const { direccion: normalizada, cambios } = normalizarDireccionIngresada(direccion)
+    if (cambios.length > 0) {
+      setDireccion(normalizada)
+      setAvisoDireccion(`Normalizamos la dirección: ${cambios.join('; ')}.`)
+    }
+
+    const calle = normalizada.calle.trim()
+    const localidad = normalizada.localidad.trim()
 
     if (!calle || !localidad) {
       setErrorGeo('Completá calle y localidad para validar la dirección.')
@@ -358,7 +386,7 @@ export default function NuevaCargaView() {
     try {
       const data = await normalizarDireccion({
         calle,
-        altura: direccion.altura.trim(),
+        altura: normalizada.altura.trim(),
         localidad,
       })
 
@@ -367,7 +395,7 @@ export default function NuevaCargaView() {
       }
 
       setGeo(data)
-      setClaveValidada(claveDireccion)
+      setClaveValidada(construirClaveDireccion(normalizada))
     } catch (err) {
       setGeo(null)
       setClaveValidada('')
@@ -465,6 +493,7 @@ export default function NuevaCargaView() {
     setClaveValidada('')
     setPinAjustado(null)
     setErrorGeo('')
+    setAvisoDireccion('')
     setDetalle({ ...DETALLE_INICIAL })
     setErrores({})
     setErrorEnvio('')
@@ -793,6 +822,7 @@ export default function NuevaCargaView() {
                         className="form-control"
                         value={direccion.calle}
                         onChange={cambiarDireccion}
+                        onBlur={normalizarCamposDireccion}
                         placeholder="Ej.: Av. Corrientes"
                       />
                     </Field>
@@ -811,6 +841,7 @@ export default function NuevaCargaView() {
                         className={`form-control ${alturaSinNumero ? 'is-invalid' : ''}`}
                         value={direccion.altura}
                         onChange={cambiarDireccion}
+                        onBlur={normalizarCamposDireccion}
                         placeholder="1234"
                       />
                     </Field>
@@ -861,6 +892,13 @@ export default function NuevaCargaView() {
                     </>
                   )}
                 </button>
+
+                {avisoDireccion && (
+                  <div className="alert alert-info d-flex align-items-start gap-2 mt-3" role="status">
+                    <Icon name="info" size={18} />
+                    <span>{avisoDireccion}</span>
+                  </div>
+                )}
 
                 {errorGeo && (
                   <div className="alert alert-warning d-flex align-items-start gap-2 mt-3" role="alert">
