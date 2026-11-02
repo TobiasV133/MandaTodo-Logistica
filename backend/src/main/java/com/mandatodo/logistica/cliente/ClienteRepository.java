@@ -20,9 +20,18 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
         """)
     Optional<Cliente> findByDocumentoNormalizado(@Param("documento") String documento);
 
-    List<Cliente> findAllByOrderByNombreRazonSocialAsc();
+    /**
+     * Cuenta los clientes cuyo documento coincide al compararlo sin guiones,
+     * puntos ni espacios. Evita duplicar un CUIT guardado como 30-71234567-8
+     * cuando el alta envía 30712345678.
+     */
+    @Query("""
+        select count(c) from Cliente c
+        where replace(replace(replace(c.numeroDocumento, '-', ''), '.', ''), ' ', '') = :documento
+        """)
+    long countByDocumentoNormalizado(@Param("documento") String documento);
 
-    boolean existsByNumeroDocumento(String numeroDocumento);
+    List<Cliente> findAllByOrderByNombreRazonSocialAsc();
 
     boolean existsByEmail(String email);
 

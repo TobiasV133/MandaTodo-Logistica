@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -7,7 +7,6 @@ import { createPortal } from 'react-dom'
  */
 export default function Modal({ open, title, children, footer, onClose }) {
   const titleId = useId()
-  const [scrollInicial] = useState(() => window.scrollY)
 
   useEffect(() => {
     if (!open) return undefined
@@ -16,9 +15,12 @@ export default function Modal({ open, title, children, footer, onClose }) {
       if (event.key === 'Escape') onClose?.()
     }
 
+    const overflowAnterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     document.addEventListener('keydown', onKeyDown)
 
     return () => {
+      document.body.style.overflow = overflowAnterior
       document.removeEventListener('keydown', onKeyDown)
     }
   }, [open, onClose])
@@ -30,7 +32,6 @@ export default function Modal({ open, title, children, footer, onClose }) {
       <div className="modal-backdrop fade show" aria-hidden="true" onClick={onClose} />
       <div
         className="modal fade show d-block portal-modal"
-        style={{ top: scrollInicial }}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"

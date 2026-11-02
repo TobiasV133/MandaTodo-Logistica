@@ -170,7 +170,6 @@ export default function AuditoriaPage() {
       <div className="page-heading">
         <div>
           <span className="page-eyebrow">Trazabilidad</span>
-          <h2>Auditoría global</h2>
           <p>Registro cronológico e inalterable de las acciones del sistema.</p>
         </div>
         <button

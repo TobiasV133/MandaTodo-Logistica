@@ -112,7 +112,6 @@ export default function PedidosView({ soloRevision = false }) {
           <span className="page-eyebrow">
             {soloRevision ? 'Bandeja de retención' : 'Gestión de envíos'}
           </span>
-          <h2>{soloRevision ? 'Pedidos en revisión' : 'Pedidos'}</h2>
           <p>
             {soloRevision
               ? 'Cargas retenidas por dirección ambigua o por posible duplicado de local.'

@@ -1,5 +1,6 @@
 import Icon from '../ui/Icon'
 import {
+  formatFechaProgramada,
   formatMoneda,
   formatPeso,
 } from '../../utils/formatters'
@@ -83,6 +84,7 @@ export default function ResumenPedido({
             <h3>Paquete</h3>
           </div>
           <SummaryRow label="Descripción" value={detalle.descripcionPaquete} />
+          <SummaryRow label="Fecha programada" value={formatFechaProgramada(detalle.fechaProgramada)} />
           <SummaryRow label="Peso" value={`${formatPeso(detalle.pesoKg)} kg`} />
           <SummaryRow label="Kilómetros" value={`${formatPeso(detalle.kilometros)} km`} />
         </section>

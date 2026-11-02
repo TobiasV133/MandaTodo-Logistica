@@ -13,22 +13,53 @@ const MESES_CORTOS = [
   'dic',
 ]
 
+const FECHA_SIN_HORA = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Convierte un valor de fecha en Date sin corrimientos de zona horaria.
+ * Las fechas sin hora (YYYY-MM-DD) se interpretan como fecha local: `new Date`
+ * las toma como UTC y en Argentina (UTC-3) mostrarían el día anterior.
+ */
+export function parseFecha(value) {
+  if (value instanceof Date) return value
+  if (typeof value === 'string' && FECHA_SIN_HORA.test(value.trim())) {
+    const [anio, mes, dia] = value.trim().split('-').map(Number)
+    return new Date(anio, mes - 1, dia)
+  }
+  return new Date(value)
+}
+
 export function formatFechaLarga(value = new Date()) {
-  const fecha = value instanceof Date ? value : new Date(value)
+  const fecha = parseFecha(value)
   if (Number.isNaN(fecha.getTime())) return '—'
   return `${fecha.getDate()} de ${MESES_CORTOS[fecha.getMonth()]} de ${fecha.getFullYear()}`
 }
 
 export function formatFecha(value) {
   if (!value) return '—'
-  const fecha = new Date(value)
+  const fecha = parseFecha(value)
   if (Number.isNaN(fecha.getTime())) return '—'
   return formatFechaLarga(fecha)
 }
 
+/**
+ * Formatea una fecha de calendario (YYYY-MM-DD) sin convertirla a UTC.
+ * `new Date('2026-11-01')` se interpreta como medianoche UTC y en Argentina
+ * retrocede un día; por eso se arma la fecha con sus componentes locales.
+ */
+export function formatFechaProgramada(value) {
+  if (!value) return '—'
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [anio, mes, dia] = value.split('-').map(Number)
+    if (!anio || !mes || !dia) return '—'
+    return `${dia} de ${MESES_CORTOS[mes - 1]} de ${anio}`
+  }
+  return formatFecha(value)
+}
+
 export function formatFechaHora(value) {
   if (!value) return '—'
-  const fecha = new Date(value)
+  const fecha = parseFecha(value)
   if (Number.isNaN(fecha.getTime())) return '—'
   const dia = String(fecha.getDate()).padStart(2, '0')
   const mes = String(fecha.getMonth() + 1).padStart(2, '0')

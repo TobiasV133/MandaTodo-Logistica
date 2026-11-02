@@ -2,6 +2,7 @@ package com.mandatodo.logistica.pedido;
 
 import com.mandatodo.logistica.pedido.dto.CambiarEstadoRequest;
 import com.mandatodo.logistica.pedido.dto.CambioEstadoResponse;
+import com.mandatodo.logistica.pedido.dto.CancelarTransitoRequest;
 import com.mandatodo.logistica.pedido.dto.CrearPedidoRequest;
 import com.mandatodo.logistica.pedido.dto.CrearPedidoResponse;
 import com.mandatodo.logistica.pedido.dto.PedidoResponse;
@@ -69,6 +70,20 @@ public class PedidoController {
         Long operarioId
     ) {
         return pedidoService.cambiarEstado(
+            id,
+            request,
+            operarioId != null ? operarioId : request.operarioId()
+        );
+    }
+
+    @PostMapping("/{id}/cancelar-transito")
+    public CambioEstadoResponse cancelarTransito(
+        @PathVariable Long id,
+        @Valid @RequestBody CancelarTransitoRequest request,
+        @RequestAttribute(value = JwtAuthInterceptor.ATTR_ID_OPERARIO, required = false)
+        Long operarioId
+    ) {
+        return pedidoService.cancelarTransito(
             id,
             request,
             operarioId != null ? operarioId : request.operarioId()

@@ -50,10 +50,21 @@ const DIRECCION_INICIAL = {
   localidad: '',
 }
 
-const DETALLE_INICIAL = {
-  descripcionPaquete: '',
-  pesoKg: '',
-  kilometros: '',
+function fechaHoyISO() {
+  const hoy = new Date()
+  const anio = hoy.getFullYear()
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0')
+  const dia = String(hoy.getDate()).padStart(2, '0')
+  return `${anio}-${mes}-${dia}`
+}
+
+function detalleInicial() {
+  return {
+    descripcionPaquete: '',
+    pesoKg: '',
+    kilometros: '',
+    fechaProgramada: fechaHoyISO(),
+  }
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -96,7 +107,7 @@ export default function NuevaCargaView() {
   const [errorGeo, setErrorGeo] = useState('')
   const [avisoDireccion, setAvisoDireccion] = useState('')
 
-  const [detalle, setDetalle] = useState(DETALLE_INICIAL)
+  const [detalle, setDetalle] = useState(detalleInicial)
   const [errores, setErrores] = useState({})
 
   const [enviando, setEnviando] = useState(false)
@@ -344,6 +355,11 @@ export default function NuevaCargaView() {
     } else if (kilometros > tarifaConfig.maxKilometros) {
       nuevos.kilometros = mensajeCapacidad(tarifaConfig)
     }
+    if (!detalle.fechaProgramada) {
+      nuevos.fechaProgramada = 'Seleccioná la fecha programada del envío.'
+    } else if (Number.isNaN(new Date(`${detalle.fechaProgramada}T00:00:00`).getTime())) {
+      nuevos.fechaProgramada = 'La fecha programada no es válida.'
+    }
     setErrores(nuevos)
     return Object.keys(nuevos).length === 0
   }
@@ -431,6 +447,7 @@ export default function NuevaCargaView() {
       descripcionPaquete: detalle.descripcionPaquete.trim(),
       pesoKg: Number(detalle.pesoKg),
       kilometros: Number(detalle.kilometros),
+      fechaProgramada: detalle.fechaProgramada,
       calle: direccion.calle.trim(),
       altura,
       pisoDepto: direccion.pisoDepto.trim() || null,
@@ -494,7 +511,7 @@ export default function NuevaCargaView() {
     setPinAjustado(null)
     setErrorGeo('')
     setAvisoDireccion('')
-    setDetalle({ ...DETALLE_INICIAL })
+    setDetalle(detalleInicial())
     setErrores({})
     setErrorEnvio('')
     setPedidoCreado(null)
@@ -1041,6 +1058,24 @@ export default function NuevaCargaView() {
                     />
                     <span>km</span>
                   </div>
+                </Field>
+              </div>
+              <div className="col-md-6">
+                <Field
+                  label="Fecha programada del envío"
+                  htmlFor="fecha-programada"
+                  required
+                  error={errores.fechaProgramada}
+                  hint="Se usa para despachar el pedido y para detectar duplicados del mismo cliente en esa fecha."
+                >
+                  <input
+                    id="fecha-programada"
+                    type="date"
+                    name="fechaProgramada"
+                    className={`form-control ${errores.fechaProgramada ? 'is-invalid' : ''}`}
+                    value={detalle.fechaProgramada}
+                    onChange={cambiarDetalle}
+                  />
                 </Field>
               </div>
             </div>
