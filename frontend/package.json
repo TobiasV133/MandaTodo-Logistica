@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test tests/addressParser.test.js",
+    "test": "node --test tests/addressParser.test.js src/tests/addressParser.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

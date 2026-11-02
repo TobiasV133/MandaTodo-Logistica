@@ -368,7 +368,7 @@ function tokenizar(texto) {
   return String(texto ?? '')
     .trim()
     .split(/[\s,]+/)
-    .map((raw) => raw.replace(/^[-–—]+|[-–—]+$/g, ''))
+    .map((raw) => raw.replace(/^[-–—"'“”‘’]+|[-–—"'“”‘’]+$/g, ''))
     .filter(Boolean)
     .map((raw) => ({ raw, norm: normalizarTexto(raw) }))
     .filter((token) => token.norm)
