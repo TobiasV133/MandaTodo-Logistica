@@ -100,7 +100,6 @@ export default function ClientesPage() {
       <div className="page-heading">
         <div>
           <span className="page-eyebrow">Base comercial</span>
-          <h2>Clientes</h2>
           <p>Personas y empresas que ya operaron con MandáTodo.</p>
         </div>
         <div className="d-flex gap-2">

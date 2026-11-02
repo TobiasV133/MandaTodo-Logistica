@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { getEstadoInfo } from '../../constants/estados'
@@ -8,7 +8,7 @@ import {
   imprimirRemito,
   resolverRevision,
 } from '../../services/pedidoService'
-import { formatFecha, formatFechaHora, formatMoneda, formatPeso } from '../../utils/formatters'
+import { formatFecha, formatFechaHora, formatFechaProgramada, formatMoneda, formatPeso } from '../../utils/formatters'
 import EstadoBadge from '../ui/EstadoBadge'
 import Icon from '../ui/Icon'
 
@@ -43,7 +43,6 @@ export default function PedidoAccionesModal({
   const descargaRef = useRef(null)
   const [pedidoActual, setPedidoActual] = useState(pedido)
   const [historial, setHistorial] = useState([])
-  const [scrollInicial] = useState(() => window.scrollY)
   const [formulario, setFormulario] = useState(null)
   const [motivoFalla, setMotivoFalla] = useState(MOTIVOS_FALLA[0])
   const [notaFalla, setNotaFalla] = useState('')
@@ -63,6 +62,14 @@ export default function PedidoAccionesModal({
   const [error, setError] = useState('')
   const [exito, setExito] = useState('')
   const [resultado, setResultado] = useState(null)
+
+  useEffect(() => {
+    const overflowAnterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = overflowAnterior
+    }
+  }, [])
 
   const estado = pedidoActual.estado
   const esRevision = estado === 'EN_REVISION'
@@ -181,7 +188,6 @@ export default function PedidoAccionesModal({
     <>
       <div
         className="modal fade show d-block portal-modal pedido-modal"
-        style={{ top: scrollInicial }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="pedido-modal-titulo"
@@ -243,7 +249,7 @@ export default function PedidoAccionesModal({
                 <Dato label="Monto del envío">{formatMoneda(monto)}</Dato>
                 <Dato label="Fecha de alta">{formatFechaHora(pedidoActual.fechaCreacion)}</Dato>
                 <Dato label="Fecha programada">
-                  {formatFecha(
+                  {formatFechaProgramada(
                     pedidoActual.fechaProgramadaEntrega ?? pedidoActual.fechaProgramada,
                   )}
                 </Dato>

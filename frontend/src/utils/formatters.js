@@ -26,6 +26,21 @@ export function formatFecha(value) {
   return formatFechaLarga(fecha)
 }
 
+/**
+ * Formatea una fecha de calendario (YYYY-MM-DD) sin convertirla a UTC.
+ * `new Date('2026-11-01')` se interpreta como medianoche UTC y en Argentina
+ * retrocede un día; por eso se arma la fecha con sus componentes locales.
+ */
+export function formatFechaProgramada(value) {
+  if (!value) return '—'
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [anio, mes, dia] = value.split('-').map(Number)
+    if (!anio || !mes || !dia) return '—'
+    return `${dia} de ${MESES_CORTOS[mes - 1]} de ${anio}`
+  }
+  return formatFecha(value)
+}
+
 export function formatFechaHora(value) {
   if (!value) return '—'
   const fecha = new Date(value)
