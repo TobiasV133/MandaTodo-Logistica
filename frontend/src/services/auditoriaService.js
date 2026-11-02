@@ -1,9 +1,17 @@
 import api from './api'
 
-export async function listarAuditoria({ fecha, operario, tipoEvento } = {}) {
+export async function listarAuditoria({
+  fecha,
+  desde,
+  hasta,
+  operario,
+  tipoEvento,
+} = {}) {
   const params = {}
 
   if (fecha) params.fecha = fecha
+  if (desde) params.desde = desde
+  if (hasta) params.hasta = hasta
   if (operario) params.operario = operario
   if (tipoEvento) params.tipoEvento = tipoEvento
 

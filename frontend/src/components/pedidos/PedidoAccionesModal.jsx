@@ -5,6 +5,7 @@ import { getEstadoInfo } from '../../constants/estados'
 import { getApiErrorMessage } from '../../services/api'
 import {
   cambiarEstado,
+  cancelarTransito,
   imprimirRemito,
   resolverRevision,
 } from '../../services/pedidoService'
@@ -94,7 +95,11 @@ export default function PedidoAccionesModal({
 
   const cambiar = async (nuevoEstado, extra = {}) => {
     const data = await ejecutar(() =>
-      cambiarEstado(pedido.idPedido, { estado: nuevoEstado, ...extra }),
+      nuevoEstado === 'CANCELADO_EN_TRANSITO'
+        ? cancelarTransito(pedido.idPedido, {
+            motivoCancelacion: extra.motivoCancelacion,
+          })
+        : cambiarEstado(pedido.idPedido, { estado: nuevoEstado, ...extra }),
     )
     if (!data) return
 
