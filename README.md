@@ -137,10 +137,9 @@ La configuración de OpenCode vive en `.opencode/opencode.json`, que establece c
 | `GET` | `/api/auditoria?fecha=...&operario=...` | Consulta auditoría con filtros por fecha y operario. |
 
 > **Estado del corte integrado:** están implementados login/me, geocodificación, listado y búsqueda
-> de clientes, alta/listado/detalle/resumen de pedidos, cambio de estado, revisiones y remitos. El ABM
-> de usuarios, la edición de clientes, la cancelación dedicada y la consulta de auditoría forman
-> parte del contrato objetivo y todavía no están expuestos. La cancelación se resuelve con
-> `PATCH /api/pedidos/{id}/estado` enviando `estado: CANCELADO_EN_TRANSITO` y `motivoCancelacion`.
+> de clientes, alta/listado/detalle/resumen de pedidos, cambio de estado, revisiones, remitos, el ABM
+> de usuarios, la edición de clientes, la cancelación dedicada y la consulta de auditoría.
+> La cancelación se resuelve con `PATCH /api/pedidos/{id}/estado` enviando `estado: CANCELADO_EN_TRANSITO` y `motivoCancelacion`.
 > Todos los endpoints salvo el login requieren `Authorization: Bearer <token>`.
 
 ## 5.1 Puesta en marcha local
